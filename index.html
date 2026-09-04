@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>📍 Geo-Tag Camera</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#000000">
+<style>
+  * { box-sizing: border-box; }
+  body, html { margin:0; padding:0; width:100%; height:100%; background:#000; font-family:sans-serif; overflow:hidden; user-select:none; -webkit-user-select:none; }
+  #app { position:relative; width:100%; height:100%; display:flex; flex-direction:column; justify-content:space-between; }
+  header { height:50px; width:100%; background:rgba(0,0,0,0.8); display:flex; align-items:center; justify-content:center; z-index:10; }
+  header h1 { color:#fff; font-size:1.1rem; margin:0; font-weight:500; }
+  #view-wrapper { position:relative; flex:1; width:100%; background:#000; display:flex; align-items:center; justify-content:center; overflow:hidden; }
+  video { width:100%; height:100%; object-fit:cover; transition:transform 0.1s ease-out; }
+  #overlay-box { position:absolute; bottom:15px; left:15px; right:15px; background:rgba(0,0,0,0.65); backdrop-filter:blur(4px); border-radius:12px; padding:12px; color:#fff; pointer-events:none; z-index:5; display:flex; flex-direction:column; gap:4px; }
+  .loc-title { color:#ffb300; font-weight:bold; font-size:0.95rem; }
+  .loc-details { color:#e0e0e0; font-size:0.8rem; font-family:monospace; }
+  #zoom-widget { position:absolute; right:15px; top:50%; transform:translateY(-50%); display:flex; flex-direction:column; align-items:center; gap:8px; z-index:6; background:rgba(0,0,0,0.5); padding:12px 6px; border-radius:20px; }
+  #zoom-slider { -webkit-appearance:slider-vertical; width:8px; height:120px; background:#555; outline:none; border-radius:4px; }
+  .zoom-label { color:#fff; font-size:11px; font-family:monospace; }
+  #controls { height:100px; width:100%; background:#000; display:flex; align-items:center; justify-content:space-around; padding:0 20px; z-index:10; }
+  .ctrl-btn { background:none; border:none; color:#fff; display:flex; flex-direction:column; align-items:center; gap:6px; cursor:pointer; font-size:12px; min-width:70px; }
+  .ctrl-btn svg { width:26px; height:26px; fill:currentColor; }
+  #shutter-btn { width:68px; height:68px; border-radius:50%; border:4px solid #fff; background:transparent; display:flex; align-items:center; justify-content:center; cursor:pointer; }
+  #shutter-btn div { width:52px; height:52px; background:#fff; border-radius:50%; }
+  #shutter-btn.disabled { opacity:0.5; pointer-events:none; }
+  #toast { position:absolute; top:70px; left:50%; transform:translateX(-50%); background:rgba(229,57,53,0.9); color:white; padding:10px 20px; border-radius:20px; font-size:13px; z-index:20; display:none; }
+  canvas { display:none; }
+  @media (orientation: landscape) {
+    #app { flex-direction: row; }
+    header { position:absolute; top:0; left:0; width:calc(100% - 100px); background:linear-gradient(to bottom, rgba(0,0,0,0.7), transparent); }
+    #controls { width:100px; height:100%; flex-direction:column; padding:20px 0; }
+    #zoom-widget { right:115px; }
+    #overlay-box { bottom:15px; left:15px; right:115px; max-width:450px; }
+  }
+</style>
+</head>
+<body>
+
+<div id="app">
+  <header><h1>📍 Geo-Tag Camera</h1></header>
+  <div id="view-wrapper">
+    <video autoplay playsinline id="video"></video>
+    <div id="overlay-box">
+      <div class="loc-title">📍 <span id="lbl-address">Locating...</span></div>
+      <div class="loc-details">Lat: <span id="lbl-lat">--</span>°&nbsp;&nbsp;Long: <span id="lbl-lon">--</span>°</div>
+      <div class="loc-details">Time: <span id="lbl-time">--</span></div>
+    </div>
+    <div id="zoom-widget">
+      <span class="zoom-label" id="zoom-value">1.0x</span>
+      <input type="range" id="zoom-slider" min="1" max="5" step="0.1" value="1">
+    </div>
+  </div>
+  <div id="controls">
+    <button class="ctrl-btn" onclick="toggleCamera()">
+      <svg viewBox="0 0 24 24"><path d="M19 8l-4 4h3c0 3.31-2.69 6-6 6-1.01 0-1.97-.25-2.8-.7l-1.46 1.46C8.97 19.54 10.43 20 12 20c4.42 0 8-3.58 8-8h3l-4-4zM6 12c0-3.31 2.69-6 6-6 1.01 0 1.97.25 2.8.7l1.46-1.46C15.03 4.46 13.57 4 12 4c-4.42 0-8 3.58-8 8H1l4 4 4-4H6z"/></svg>
+      <span>Switch</span>
+    </button>
+    <button id="shutter-btn" onclick="performCapture()"><div></div></button>
+    <button class="ctrl-btn" id="dl-btn" onclick="saveToGallery()" style="opacity:0.5; pointer-events:none;">
+      <svg viewBox="0 0 24 24"><path d="M19 12v7H5v-7H3v7c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2v-7h-2zm-6 .67l2.59-2.58L17 11.5l-5 5-5-5 1.41-1.41L11 12.67V3h2v9.67z"/></svg>
+      <span>Download</span>
+    </button>
+  </div>
+</div>
+
+<div id="toast"></div>
+<canvas id="canvas"></canvas>
+
+<script>
+let videoStream = null;
+let useFrontCamera = false;
+let geoPosition = null;
+let readableAddress = "Fetching location...";
+let activeZoom = 1.0;
+let maxZoomSupported = 5.0;
+let baseImageBlob = null;
+let initialTouchDist = 0;
+
+const videoEl = document.getElementById("video");
+const canvasEl = document.getElementById("canvas");
+const zoomSlider = document.getElementById("zoom-slider");
+const zoomValueDisplay = document.getElementById("zoom-value");
+const toastEl = document.getElementById("toast");
+const dlBtn = document.getElementById("dl-btn");
+const shutterBtn = document.getElementById("shutter-btn");
+
+function showToast(msg) {
+  toastEl.textContent = msg;
+  toastEl.style.display = "block";
+  setTimeout(() => { toastEl.style.display = "none"; }, 3000);
+}
+
+async function killCameraTracks() {
+  if (videoStream) {
+    videoStream.getTracks().forEach(t => t.stop());
+    videoStream = null;
+    videoEl.srcObject = null;
+    await new Promise(r => setTimeout(r, 250));
+  }
+}
+
+async function startCameraSystem() {
+  await killCameraTracks();
+  try {
+    const constraints = {
+      video: {
+        facingMode: useFrontCamera ? "user" : "environment",
+        width: { ideal: 1920 },
+        height: { ideal: 1080 }
+      }
+    };
+    videoStream = await navigator.mediaDevices.getUserMedia(constraints);
+    videoEl.srcObject = videoStream;
+    
+    const track = videoStream.getVideoTracks();
+    const capabilities = track[0].getCapabilities ? track[0].getCapabilities() : {};
+    if (capabilities.zoom) {
+      zoomSlider.min = capabilities.zoom.min || 1;
+      zoomSlider.max = capabilities.zoom.max || 5;
+      zoomSlider.step = capabilities.zoom.step || 0.1;
+      maxZoomSupported = capabilities.zoom.max;
+    }
+    triggerLocationPoll();
+  } catch (e) {
+    showToast("Camera Access Error");
+  }
+}
+
+function toggleCamera() {
+  useFrontCamera = !useFrontCamera;
+  activeZoom = 1.0;
+  applyZoomSetting(1.0);
+  startCameraSystem();
+}
+
+function applyZoomSetting(val) {
+  activeZoom = parseFloat(val);
+  zoomSlider.value = activeZoom;
+  zoomValueDisplay.textContent = activeZoom.toFixed(1) + "x";
+  if (videoStream) {
+    const track = videoStream.getVideoTracks();
+    if (track[0].getCapabilities?.().zoom) {
+      track[0].applyConstraints({ advanced: [{ zoom: activeZoom }] }).catch(() => {});
+      videoEl.style.transform = "scale(1)";
+      return;
+    }
+  }
+  videoEl.style.transform = `scale(${activeZoom})`;
+}
+
+zoomSlider.addEventListener("input", (e) => applyZoomSetting(e.target.value));
+
+const viewWrapper = document.getElementById("view-wrapper");
+viewWrapper.addEventListener("touchstart", (e) => {
+  if (e.touches.length === 2) {
+    initialTouchDist = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
+  }
+}, { passive: true });
+
+viewWrapper.addEventListener("touchmove", (e) => {
+  if (e.touches.length === 2 && initialTouchDist > 0) {
+    const d = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
+    const diff = d - initialTouchDist;
+    let z = activeZoom + (diff * 0.01);
+    z = Math.min(Math.max(z, 1), maxZoomSupported);
+    applyZoomSetting(z);
+    initialTouchDist = d;
+  }
+}, { passive: true });
+
+viewWrapper.addEventListener("touchend", () => initialTouchDist = 0);
+
+function triggerLocationPoll() {
+  if (!navigator.geolocation) {
+    readableAddress = "No GPS Support";
+    document.getElementById("lbl-address").textContent = readableAddress;
+    return;
+  }
+  navigator.geolocation.getCurrentPosition(async (pos) => {
+    geoPosition = pos.coords;
+    document.getElementById("lbl-lat").textContent = geoPosition.latitude.toFixed(6);
+    document.getElementById("lbl-lon").textContent = geoPosition.longitude.toFixed(6);
+    readableAddress = await reverseGeocode(geoPosition.latitude, geoPosition.longitude);
+    document.getElementById("lbl-address").textContent = readableAddress;
+  }, () => {
+    document.getElementById("lbl-address").textContent = "GPS Error";
+  }, { enableHighAccuracy: true, timeout: 10000 });
+}
+
+async function reverseGeocode(lat, lon) {
+  try {
+    const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lon}`, { headers: { 'Accept-Language': 'en' } });
+    const d = await res.json();
+    const a = d.address || {};
+    const loc = a.village || a.hamlet || a.suburb || a.locality || a.town || a.city || "Area Detected";
+    return `${loc}, ${a.state || ""}, ${a.country || ""}`.replace(/^,\s*|,\s*$/, '');
+  } catch {
+    return "Location Verified";
+  }
+}
+
+setInterval(() => {
+  const d = new Date();
+  document.getElementById("lbl-time").textContent = d.toLocaleDateString('en-GB') + " " + d.toLocaleTimeString('en-US', { hour12: false });
+}, 1000);
+
+async function performCapture() {
+  if (!videoStream) return;
+  shutterBtn.classList.add("disabled");
+  const track = videoStream.getVideoTracks();
+  const settings = track[0].getSettings();
+  const w = settings.width || videoEl.videoWidth;
+  const h = settings.height || videoEl.videoHeight;
+  
+  canvasEl.width = w;
+  canvasEl.height = h;
+  const ctx = canvasEl.getContext("2d");
+  
+  const caps = track[0].getCapabilities ? track[0].getCapabilities() : {};
+  if (!caps.zoom && activeZoom > 1.0) {
+    const sw = w / activeZoom;
+    const sh = h / activeZoom;
+    const sx = (w - sw) / 2;
+    const sy = (h - sh) / 2;
+    ctx.drawImage(videoEl, sx, sy, sw, sh, 0, 0, w, h);
+  } else {
+    ctx.drawImage(videoEl, 0, 0, w, h);
+  }
+  
+  // Bottom Left Geo-Tag Details
+  const lat = geoPosition ? geoPosition.latitude.toFixed(6) : "--";
+  const lon = geoPosition ? geoPosition.longitude.toFixed(6) : "--";
+  const timeStr = new Date().toLocaleDateString('en-GB') + " " + new Date().toLocaleTimeString('en-US', { hour12: false });
+  const lines = [`📍 ${readableAddress}`, `Lat: ${lat}°  Long: ${lon}°`, `Time: ${timeStr}`];
+  
+  const baseline = Math.max(w, h);
+  const gap = Math.round(baseline * 0.016);
+  const size = Math.round(baseline * 0.022);
+  ctx.font = `500 ${size}px sans-serif`;
+  
+  const boxW = Math.max(...lines.map(l => ctx.measureText(l).width)) + Math.round(size * 1.6);
+  const boxH = (lines.length * size) + ((lines.length - 1) * gap) + Math.round(size * 1.6);
+  const rx = Math.round(baseline * 0.025);
+  const ry = h - boxH - Math.round(baseline * 0.025);
+  
+  ctx.fillStyle = "rgba(0,0,0,0.65)";
+  if (ctx.roundRect) {
+    ctx.beginPath(); ctx.roundRect(rx, ry, boxW, boxH, Math.round(baseline * 0.01)); ctx.fill();
+  } else {
+    ctx.fillRect(rx, ry, boxW, boxH);
+  }
+  
+  ctx.fillStyle = "#fff";
+  lines.forEach((l, i) => {
+    const y = ry + Math.round(size * 0.8) + (i * (size + gap)) + (size * 0.85);
+    if (i === 0) {
+      ctx.fillStyle = "#ffb300"; ctx.fillText(l, rx + Math.round(size * 0.8), y); ctx.fillStyle = "#fff";
+    } else {
+      ctx.fillText(l, rx + Math.round(size * 0.8), y);
+    }
+  });
+
+  // Top Right Corner Watermark
+  const wmText = "Powered by TCM Guide Gujarat";
+  const iconImg = new Image();
+  iconImg.crossOrigin = "anonymous";
+  iconImg.src = "https://i.postimg.cc/8cbWz0qr/APP-LOGO.png";
+  
+  iconImg.onload = function() {
+    const wmSize = Math.round(baseline * 0.018);
+    ctx.font = `bold ${wmSize}px sans-serif`;
+    const iconW = Math.round(wmSize * 1.2);
+    const tw = ctx.measureText(wmText).width;
+    
+    const wx = w - tw - iconW - Math.round(baseline * 0.05);
+    const wy = Math.round(baseline * 0.025);
+    const wBoxW = tw + iconW + Math.round(wmSize * 1.5);
+    const wBoxH = wmSize + Math.round(wmSize * 1.2);
+    
+    ctx.fillStyle = "rgba(0,0,0,0.65)";
+    if (ctx.roundRect) {
+      ctx.beginPath(); ctx.roundRect(wx - 10, wy, wBoxW, wBoxH, Math.round(baseline * 0.005)); ctx.fill();
+    } else {
+      ctx.fillRect(wx - 10, wy, wBoxW, wBoxH);
+    }
+    
+    try { ctx.drawImage(iconImg, wx, wy + (wBoxH - iconW) / 2, iconW, iconW); } catch(e){}
+    ctx.fillStyle = "#ffffff";
+    ctx.fillText(wmText, wx + iconW + 10, wy + (wBoxH + wmSize) / 2 - 2);
+    
+    generateBlobOutput();
+  };
+  
+  iconImg.onerror = function() {
+    const wmSize = Math.round(baseline * 0.018);
+    ctx.font = `bold ${wmSize}px sans-serif`;
+    const tw = ctx.measureText(wmText).width;
+    const wx = w - tw - Math.round(baseline * 0.05);
+    const wy = Math.round(baseline * 0.025);
+    const wBoxW = tw + Math.round(wmSize * 1.5);
+    const wBoxH = wmSize + Math.round(wmSize * 1.2);
+    
+    ctx.fillStyle = "rgba(0,0,0,0.65)";
+    ctx.fillRect(wx - 10, wy, wBoxW, wBoxH);
+    ctx.fillStyle = "#ffffff";
+    ctx.fillText(wmText, wx, wy + (wBoxH + wmSize) / 2 - 2);
+    
+    generateBlobOutput();
+  };
+}
+
+function generateBlobOutput() {
+  canvasEl.toBlob((b) => {
+    baseImageBlob = b;
+    dlBtn.style.opacity = "1";
+    dlBtn.style.pointerEvents = "auto";
+    shutterBtn.classList.remove("disabled");
+    showToast("Captured successfully!");
+  }, "image/jpeg", 0.95);
+}
+
+function saveToGallery() {
+  if (!baseImageBlob) return;
+  const url = URL.createObjectURL(baseImageBlob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `GEOTAG_${new Date().toISOString().replace(/[-:.]/g, "")}.jpg`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+window.addEventListener("load", () => {
+  startCameraSystem();
+  if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
+});
+</script>
+</body>
+</html>
