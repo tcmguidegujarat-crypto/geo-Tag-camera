@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Geo-Tag Camera</title>
+  <link rel="manifest" href="manifest.json">
   <style>
     * { box-sizing: border-box; }
     body, html {
@@ -117,7 +118,7 @@
       <video id="video" autoplay playsinline></video>
 
       <div id="overlay-box">
-        <div class="loc-title" id="lbl-address">📍 Locating...</div>
+        <div class="loc-title" id="lbl-address">📍 Fetching location...</div>
         <div class="loc-details">
           Lat: <span id="lbl-lat">--</span>° &nbsp;&nbsp;
           Long: <span id="lbl-lon">--</span>°
@@ -139,7 +140,7 @@
     </div>
 
     <div id="controls">
-      <button class="ctrl-btn" onclick="toggleCamera()">
+      <button class="ctrl-btn" id="switch-btn" onclick="toggleCamera()">
         <svg viewBox="0 0 24 24"><path d="M12 6v3l4-4-4-4v3c-4.42 0-8 3.58-8 8 0 1.57.46 3.03 1.24 4.26L6.7 14.8C6.25 13.95 6 13 6 12c0-3.31 2.69-6 6-6zm6.76 1.74L17.3 9.2c.45.85.7 1.8.7 2.8 0 3.31-2.69 6-6 6v-3l-4 4 4 4v-3c4.42 0-8-3.58 8-8 0-1.57-.46-3.03-1.24-4.26z"/></svg>
         Switch
       </button>
@@ -174,6 +175,7 @@
     const toastEl = document.getElementById("toast");
     const dlBtn = document.getElementById("dl-btn");
     const shutterBtn = document.getElementById("shutter-btn");
+    const switchBtn = document.getElementById("switch-btn");
     const viewWrapper = document.getElementById("view-wrapper");
 
     function showToast(msg) {
@@ -184,45 +186,62 @@
 
     async function killCameraTracks() {
       if (videoStream) {
-        videoStream.getTracks().forEach((track) => track.stop());
+        const tracks = videoStream.getVideoTracks();
+        tracks.forEach((track) => track.stop());
         videoStream = null;
         videoEl.srcObject = null;
-        await new Promise((resolve) => setTimeout(resolve, 250));
+        await new Promise((resolve) => setTimeout(resolve, 500));
       }
     }
 
     async function startCameraSystem() {
       await killCameraTracks();
+
       try {
         videoStream = await navigator.mediaDevices.getUserMedia({
           video: {
-            facingMode: useFrontCamera ? "user" : "environment",
+            facingMode: useFrontCamera ? "user" : { exact: "environment" },
             width: { ideal: 1920 },
             height: { ideal: 1080 }
           }
         });
         videoEl.srcObject = videoStream;
-
-        const tracks = videoStream.getVideoTracks();
-        const capabilities = tracks[0].getCapabilities ? tracks[0].getCapabilities() : {};
-
-        if (capabilities.zoom) {
-          zoomSlider.min = capabilities.zoom.min || 1;
-          zoomSlider.max = capabilities.zoom.max || 5;
-          zoomSlider.step = capabilities.zoom.step || 0.1;
-          maxZoomSupported = capabilities.zoom.max;
-        }
-        triggerLocationPoll();
       } catch (err) {
-        showToast("Camera Access Error");
+        try {
+          videoStream = await navigator.mediaDevices.getUserMedia({
+            video: { facingMode: useFrontCamera ? "user" : "environment" }
+          });
+          videoEl.srcObject = videoStream;
+        } catch (fallbackErr) {
+          showToast("Camera Access Error");
+          return;
+        }
       }
+
+      try {
+        const tracks = videoStream.getVideoTracks();
+        if (tracks.length > 0) {
+          const capabilities = tracks[0].getCapabilities ? tracks[0].getCapabilities() : {};
+          if (capabilities.zoom) {
+            zoomSlider.min = capabilities.zoom.min || 1;
+            zoomSlider.max = capabilities.zoom.max || 5;
+            zoomSlider.step = capabilities.zoom.step || 0.1;
+            maxZoomSupported = capabilities.zoom.max;
+          }
+        }
+      } catch (e) {}
+
+      triggerLocationPoll();
     }
 
-    function toggleCamera() {
+    async function toggleCamera() {
+      switchBtn.style.pointerEvents = "none";
       useFrontCamera = !useFrontCamera;
       activeZoom = 1;
       applyZoomSetting(1);
-      startCameraSystem();
+      
+      await startCameraSystem();
+      switchBtn.style.pointerEvents = "auto";
     }
 
     function applyZoomSetting(value) {
@@ -232,7 +251,7 @@
 
       if (videoStream) {
         const tracks = videoStream.getVideoTracks();
-        if (tracks[0].getCapabilities?.().zoom) {
+        if (tracks[0]?.getCapabilities?.().zoom) {
           tracks[0].applyConstraints({ advanced: [{ zoom: activeZoom }] }).catch(() => {});
           videoEl.style.transform = "scale(1)";
           return;
@@ -310,7 +329,6 @@
         now.toLocaleDateString("en-GB") + " " + now.toLocaleTimeString("en-US", { hour12: false });
     }, 1000);
 
-    // કૅપ્ચર અને વોટરમાર્ક ડ્રોઈંગ ફંક્શન
     async function performCapture() {
       if (!videoStream) return;
       shutterBtn.classList.add("disabled");
@@ -339,7 +357,6 @@
       const now = new Date();
       const timeStr = now.toLocaleDateString("en-GB") + " " + now.toLocaleTimeString("en-US", { hour12: false });
 
-      // કેન્વાસ માટે લાઈનો નક્કી કરી
       const line1 = `📍 ${readableAddress}`;
       const line2 = `Lat: ${latStr}°  Long: ${lonStr}°`;
       const line3 = `Time: ${timeStr}`;
@@ -352,7 +369,6 @@
 
       ctx.font = `bold ${fontSize}px sans-serif`;
       
-      // બોક્સ સાઈઝ ગણતરી
       const w1 = ctx.measureText(line1).width;
       const w2 = ctx.measureText(line2).width;
       const w3 = ctx.measureText(line3).width;
@@ -365,29 +381,23 @@
       const boxX = margin;
       const boxY = height - boxHeight - margin;
 
-      // ૧. બ્લેક બેકગ્રાઉન્ડ બોક્સ
       ctx.fillStyle = "rgba(0, 0, 0, 0.70)";
       ctx.fillRect(boxX, boxY, boxWidth, boxHeight);
 
-      // ૨. ટેક્સ્ટ પ્રિન્ટિંગ
       let currentY = boxY + padding + fontSize;
 
-      // Line 1: Address (Orange)
       ctx.fillStyle = "#ffb300";
       ctx.font = `bold ${fontSize}px sans-serif`;
       ctx.fillText(line1, boxX + padding, currentY);
 
-      // Line 2: Lat/Long (White)
       currentY += fontSize + lineGap;
       ctx.fillStyle = "#ffffff";
       ctx.font = `500 ${fontSize}px sans-serif`;
       ctx.fillText(line2, boxX + padding, currentY);
 
-      // Line 3: Time (White)
       currentY += fontSize + lineGap;
       ctx.fillText(line3, boxX + padding, currentY);
 
-      // Line 4: TCM Watermark (Orange Bold)
       currentY += fontSize + lineGap;
       ctx.fillStyle = "#ffb300";
       ctx.font = `bold ${fontSize}px sans-serif`;
@@ -406,7 +416,6 @@
       );
     }
 
-    // ડાઉનલોડ અને Alert ફંક્શન
     function saveToGallery() {
       if (!baseImageBlob) return;
 
