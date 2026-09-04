@@ -1,18 +1,17 @@
 {
-  "name": "Geo-Tag GPS Stamper Camera",
   "short_name": "GeoCam",
-  "description": "Premium Pro Real-time GPS Location Stamp Map Camera UI Layout.",
-  "start_url": "index.html",
-  "display": "standalone",
-  "orientation": "any",
-  "background_color": "#000000",
-  "theme_color": "#000000",
+  "name": "Geo-Tag GPS Map Camera",
   "icons": [
     {
-      "src": "https://i.postimg.cc/8cbWz0qr/APP-LOGO.png",
-      "sizes": "512x512",
+      "src": "https://postimg.cc",
       "type": "image/png",
+      "sizes": "512x512",
       "purpose": "any maskable"
     }
-  ]
+  ],
+  "start_url": "./index.html",
+  "background_color": "#000000",
+  "theme_color": "#000000",
+  "display": "standalone",
+  "orientation": "portrait-primary"
 }
