@@ -5,14 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Geo-Tag Camera</title>
   <style>
-    * {
-      box-sizing: border-box;
-    }
+    * { box-sizing: border-box; }
     body, html {
-      margin: 0;
-      padding: 0;
-      width: 100%;
-      height: 100%;
+      margin: 0; padding: 0;
+      width: 100%; height: 100%;
       background: #000;
       font-family: sans-serif;
       overflow: hidden;
@@ -21,192 +17,92 @@
     }
     #app {
       position: relative;
-      width: 100%;
-      height: 100%;
-      display: flex;
-      flex-direction: column;
+      width: 100%; height: 100%;
+      display: flex; flex-direction: column;
       justify-content: space-between;
     }
     header {
-      height: 50px;
-      width: 100%;
+      height: 50px; width: 100%;
       background: rgba(0, 0, 0, .8);
-      display: flex;
-      align-items: center;
-      justify-content: center;
+      display: flex; align-items: center; justify-content: center;
       z-index: 10;
     }
-    header h1 {
-      color: #fff;
-      font-size: 1.1rem;
-      margin: 0;
-      font-weight: 500;
-    }
+    header h1 { color: #fff; font-size: 1.1rem; margin: 0; font-weight: 500; }
     #view-wrapper {
-      position: relative;
-      flex: 1;
-      width: 100%;
+      position: relative; flex: 1; width: 100%;
       background: #000;
-      display: flex;
-      align-items: center;
-      justify-content: center;
+      display: flex; align-items: center; justify-content: center;
       overflow: hidden;
     }
     video {
-      width: 100%;
-      height: 100%;
+      width: 100%; height: 100%;
       object-fit: cover;
       transition: transform .1s ease-out;
     }
     #overlay-box {
-      position: absolute;
-      bottom: 15px;
-      left: 15px;
-      right: 15px;
+      position: absolute; bottom: 15px; left: 15px; right: 15px;
       background: rgba(0, 0, 0, .65);
       backdrop-filter: blur(4px);
-      border-radius: 12px;
-      padding: 12px;
-      color: #fff;
-      pointer-events: none;
+      border-radius: 12px; padding: 12px;
+      color: #fff; pointer-events: none;
       z-index: 5;
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
+      display: flex; flex-direction: column; gap: 4px;
     }
-    .loc-title {
-      color: #ffb300;
-      font-weight: 700;
-      font-size: .95rem;
-    }
-    .loc-details {
-      color: #e0e0e0;
-      font-size: .8rem;
-      font-family: monospace;
-    }
-    .brand-watermark {
-      color: #ffb300;
-      font-weight: bold;
-      font-size: .8rem;
-      margin-top: 2px;
-    }
+    .loc-title { color: #ffb300; font-weight: 700; font-size: .95rem; }
+    .loc-details { color: #e0e0e0; font-size: .8rem; font-family: monospace; }
+    .brand-watermark { color: #ffb300; font-weight: bold; font-size: .85rem; margin-top: 2px; }
     #zoom-widget {
-      position: absolute;
-      right: 15px;
-      top: 50%;
+      position: absolute; right: 15px; top: 50%;
       transform: translateY(-50%);
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 8px;
-      z-index: 6;
-      background: rgba(0, 0, 0, .5);
-      padding: 12px 6px;
-      border-radius: 20px;
+      display: flex; flex-direction: column; align-items: center; gap: 8px;
+      z-index: 6; background: rgba(0, 0, 0, .5);
+      padding: 12px 6px; border-radius: 20px;
     }
     #zoom-slider {
       -webkit-appearance: slider-vertical;
-      width: 8px;
-      height: 120px;
-      background: #555;
-      outline: 0;
-      border-radius: 4px;
+      width: 8px; height: 120px;
+      background: #555; outline: 0; border-radius: 4px;
     }
-    .zoom-label {
-      color: #fff;
-      font-size: 11px;
-      font-family: monospace;
-    }
+    .zoom-label { color: #fff; font-size: 11px; font-family: monospace; }
     #controls {
-      height: 100px;
-      width: 100%;
+      height: 100px; width: 100%;
       background: #000;
-      display: flex;
-      align-items: center;
-      justify-content: space-around;
-      padding: 0 20px;
-      z-index: 10;
+      display: flex; align-items: center; justify-content: space-around;
+      padding: 0 20px; z-index: 10;
     }
     .ctrl-btn {
-      background: none;
-      border: none;
-      color: #fff;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 6px;
-      cursor: pointer;
-      font-size: 12px;
-      min-width: 70px;
+      background: none; border: none; color: #fff;
+      display: flex; flex-direction: column; align-items: center; gap: 6px;
+      cursor: pointer; font-size: 12px; min-width: 70px;
     }
-    .ctrl-btn svg {
-      width: 26px;
-      height: 26px;
-      fill: currentColor;
-    }
+    .ctrl-btn svg { width: 26px; height: 26px; fill: currentColor; }
     #shutter-btn {
-      width: 68px;
-      height: 68px;
-      border-radius: 50%;
-      border: 4px solid #fff;
+      width: 68px; height: 68px;
+      border-radius: 50%; border: 4px solid #fff;
       background: transparent;
-      display: flex;
-      align-items: center;
-      justify-content: center;
+      display: flex; align-items: center; justify-content: center;
       cursor: pointer;
     }
-    #shutter-btn div {
-      width: 52px;
-      height: 52px;
-      background: #fff;
-      border-radius: 50%;
-    }
-    #shutter-btn.disabled {
-      opacity: .5;
-      pointer-events: none;
-    }
+    #shutter-btn div { width: 52px; height: 52px; background: #fff; border-radius: 50%; }
+    #shutter-btn.disabled { opacity: .5; pointer-events: none; }
     #toast {
-      position: absolute;
-      top: 70px;
-      left: 50%;
+      position: absolute; top: 70px; left: 50%;
       transform: translateX(-50%);
-      background: rgba(229, 57, 53, .9);
-      color: #fff;
-      padding: 10px 20px;
-      border-radius: 20px;
-      font-size: 13px;
-      z-index: 20;
-      display: none;
+      background: rgba(229, 57, 53, .9); color: #fff;
+      padding: 10px 20px; border-radius: 20px;
+      font-size: 13px; z-index: 20; display: none;
     }
-    canvas {
-      display: none;
-    }
+    canvas { display: none; }
     @media (orientation: landscape) {
-      #app {
-        flex-direction: row;
-      }
+      #app { flex-direction: row; }
       header {
-        position: absolute;
-        top: 0;
-        left: 0;
+        position: absolute; top: 0; left: 0;
         width: calc(100% - 100px);
         background: linear-gradient(to bottom, rgba(0, 0, 0, .7), transparent);
       }
-      #controls {
-        width: 100px;
-        height: 100%;
-        flex-direction: column;
-        padding: 20px 0;
-      }
-      #zoom-widget {
-        right: 115px;
-      }
-      #overlay-box {
-        bottom: 15px;
-        left: 15px;
-        right: 115px;
-        max-width: 450px;
-      }
+      #controls { width: 100px; height: 100%; flex-direction: column; padding: 20px 0; }
+      #zoom-widget { right: 115px; }
+      #overlay-box { bottom: 15px; left: 15px; right: 115px; max-width: 450px; }
     }
   </style>
 </head>
@@ -283,9 +179,7 @@
     function showToast(msg) {
       toastEl.textContent = msg;
       toastEl.style.display = "block";
-      setTimeout(() => {
-        toastEl.style.display = "none";
-      }, 3000);
+      setTimeout(() => { toastEl.style.display = "none"; }, 3000);
     }
 
     async function killCameraTracks() {
@@ -339,9 +233,7 @@
       if (videoStream) {
         const tracks = videoStream.getVideoTracks();
         if (tracks[0].getCapabilities?.().zoom) {
-          tracks[0].applyConstraints({
-            advanced: [{ zoom: activeZoom }]
-          }).catch(() => {});
+          tracks[0].applyConstraints({ advanced: [{ zoom: activeZoom }] }).catch(() => {});
           videoEl.style.transform = "scale(1)";
           return;
         }
@@ -359,10 +251,10 @@
             document.getElementById("lbl-lat").textContent = geoPosition.latitude.toFixed(6);
             document.getElementById("lbl-lon").textContent = geoPosition.longitude.toFixed(6);
             readableAddress = await reverseGeocode(geoPosition.latitude, geoPosition.longitude);
-            document.getElementById("lbl-address").textContent = readableAddress;
+            document.getElementById("lbl-address").textContent = "📍 " + readableAddress;
           },
           () => {
-            document.getElementById("lbl-address").textContent = "GPS Error";
+            document.getElementById("lbl-address").textContent = "📍 GPS Error";
           },
           { enableHighAccuracy: true, timeout: 10000 }
         );
@@ -410,9 +302,7 @@
       }
     }, { passive: true });
 
-    viewWrapper.addEventListener("touchend", () => {
-      initialTouchDist = 0;
-    });
+    viewWrapper.addEventListener("touchend", () => { initialTouchDist = 0; });
 
     setInterval(() => {
       const now = new Date();
@@ -420,6 +310,7 @@
         now.toLocaleDateString("en-GB") + " " + now.toLocaleTimeString("en-US", { hour12: false });
     }, 1000);
 
+    // કૅપ્ચર અને વોટરમાર્ક ડ્રોઈંગ ફંક્શન
     async function performCapture() {
       if (!videoStream) return;
       shutterBtn.classList.add("disabled");
@@ -448,42 +339,59 @@
       const now = new Date();
       const timeStr = now.toLocaleDateString("en-GB") + " " + now.toLocaleTimeString("en-US", { hour12: false });
 
-      const lines = [
-        `📍 ${readableAddress}`,
-        `Lat: ${latStr}°  Long: ${lonStr}°`,
-        `Time: ${timeStr}`,
-        `Powered by TCM Guide Gujarat`
-      ];
+      // કેન્વાસ માટે લાઈનો નક્કી કરી
+      const line1 = `📍 ${readableAddress}`;
+      const line2 = `Lat: ${latStr}°  Long: ${lonStr}°`;
+      const line3 = `Time: ${timeStr}`;
+      const line4 = `Powered by TCM Guide Gujarat`;
 
       const maxDim = Math.max(width, height);
-      const lineGap = Math.round(0.016 * maxDim);
-      const fontSize = Math.round(0.022 * maxDim);
+      const fontSize = Math.round(0.024 * maxDim);
+      const lineGap = Math.round(0.015 * maxDim);
+      const padding = Math.round(0.02 * maxDim);
 
-      ctx.font = `500 ${fontSize}px sans-serif`;
-      const boxWidth = Math.max(...lines.map((line) => ctx.measureText(line).width)) + Math.round(1.6 * fontSize);
-      const boxHeight = lines.length * fontSize + (lines.length - 1) * lineGap + Math.round(1.6 * fontSize);
+      ctx.font = `bold ${fontSize}px sans-serif`;
+      
+      // બોક્સ સાઈઝ ગણતરી
+      const w1 = ctx.measureText(line1).width;
+      const w2 = ctx.measureText(line2).width;
+      const w3 = ctx.measureText(line3).width;
+      const w4 = ctx.measureText(line4).width;
+      const maxTextWidth = Math.max(w1, w2, w3, w4);
+
+      const boxWidth = maxTextWidth + (padding * 2);
+      const boxHeight = (fontSize * 4) + (lineGap * 3) + (padding * 2);
       const margin = Math.round(0.025 * maxDim);
+      const boxX = margin;
       const boxY = height - boxHeight - margin;
 
-      ctx.fillStyle = "rgba(0,0,0,0.65)";
-      ctx.fillRect(margin, boxY, boxWidth, boxHeight);
+      // ૧. બ્લેક બેકગ્રાઉન્ડ બોક્સ
+      ctx.fillStyle = "rgba(0, 0, 0, 0.70)";
+      ctx.fillRect(boxX, boxY, boxWidth, boxHeight);
 
-      lines.forEach((line, i) => {
-        const textY = boxY + Math.round(0.8 * fontSize) + i * (fontSize + lineGap) + Math.round(0.85 * fontSize);
-        if (i === 0) {
-          ctx.fillStyle = "#ffb300";
-          ctx.font = `500 ${fontSize}px sans-serif`;
-          ctx.fillText(line, margin + Math.round(0.8 * fontSize), textY);
-        } else if (i === lines.length - 1) {
-          ctx.fillStyle = "#ffb300";
-          ctx.font = `bold ${fontSize}px sans-serif`;
-          ctx.fillText(line, margin + Math.round(0.8 * fontSize), textY);
-        } else {
-          ctx.fillStyle = "#fff";
-          ctx.font = `500 ${fontSize}px sans-serif`;
-          ctx.fillText(line, margin + Math.round(0.8 * fontSize), textY);
-        }
-      });
+      // ૨. ટેક્સ્ટ પ્રિન્ટિંગ
+      let currentY = boxY + padding + fontSize;
+
+      // Line 1: Address (Orange)
+      ctx.fillStyle = "#ffb300";
+      ctx.font = `bold ${fontSize}px sans-serif`;
+      ctx.fillText(line1, boxX + padding, currentY);
+
+      // Line 2: Lat/Long (White)
+      currentY += fontSize + lineGap;
+      ctx.fillStyle = "#ffffff";
+      ctx.font = `500 ${fontSize}px sans-serif`;
+      ctx.fillText(line2, boxX + padding, currentY);
+
+      // Line 3: Time (White)
+      currentY += fontSize + lineGap;
+      ctx.fillText(line3, boxX + padding, currentY);
+
+      // Line 4: TCM Watermark (Orange Bold)
+      currentY += fontSize + lineGap;
+      ctx.fillStyle = "#ffb300";
+      ctx.font = `bold ${fontSize}px sans-serif`;
+      ctx.fillText(line4, boxX + padding, currentY);
 
       canvasEl.toBlob(
         (blob) => {
@@ -498,19 +406,22 @@
       );
     }
 
+    // ડાઉનલોડ અને Alert ફંક્શન
     function saveToGallery() {
-      if (baseImageBlob) {
-        const url = URL.createObjectURL(baseImageBlob);
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = `GEOTAG_${new Date().toISOString().replace(/[-:.]/g, "")}.jpg`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
+      if (!baseImageBlob) return;
+
+      const url = URL.createObjectURL(baseImageBlob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `GEOTAG_${Date.now()}.jpg`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      
+      setTimeout(() => {
         URL.revokeObjectURL(url);
-        
         alert("Downloaded Successfully!");
-      }
+      }, 300);
     }
 
     window.addEventListener("load", () => {
