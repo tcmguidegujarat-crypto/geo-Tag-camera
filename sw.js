@@ -1,19 +1,20 @@
-const CACHE_NAME = 'geocam-v2-cache';
+const CACHE_NAME = 'geocam-v3-cache';
 const ASSETS = [
-  'index.html',
-  'manifest.json'
+  './',
+  './index.html',
+  './manifest.json'
 ];
 
-self.addEventListener('install', (e) => {
-  e.waitUntil(
+self.addEventListener('install', (event) => {
+  event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
       return cache.addAll(ASSETS);
     }).then(() => self.skipWaiting())
   );
 });
 
-self.addEventListener('activate', (e) => {
-  e.waitUntil(
+self.addEventListener('activate', (event) => {
+  event.waitUntil(
     caches.keys().then((keys) => {
       return Promise.all(
         keys.map((key) => {
@@ -26,14 +27,14 @@ self.addEventListener('activate', (e) => {
   );
 });
 
-self.addEventListener('fetch', (e) => {
-  e.respondWith(
-    caches.match(e.request).then((cachedResponse) => {
-      return cachedResponse || fetch(e.request).catch(() => {
-        if (e.request.mode === 'navigate') {
-          return caches.match('index.html');
-        }
-      });
+self.addEventListener('fetch', (event) => {
+  // Bypassing nominatim geocoding network queries from hitting PWA service cache pipelines
+  if (event.request.url.includes('nominatim.openstreetmap.org')) {
+    return;
+  }
+  event.respondWith(
+    caches.match(event.request).then((cachedResponse) => {
+      return cachedResponse || fetch(event.request);
     })
   );
 });
