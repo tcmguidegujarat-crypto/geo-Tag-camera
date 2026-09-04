@@ -16,7 +16,6 @@ const dlBtn = document.getElementById("dl-btn");
 const shutterBtn = document.getElementById("shutter-btn");
 const viewWrapper = document.getElementById("view-wrapper");
 
-// Toast મેસેજ બતાવવા માટે
 function showToast(msg) {
   toastEl.textContent = msg;
   toastEl.style.display = "block";
@@ -25,7 +24,6 @@ function showToast(msg) {
   }, 3000);
 }
 
-// કેમેરા બંધ કરવા માટે
 async function killCameraTracks() {
   if (videoStream) {
     videoStream.getTracks().forEach((track) => track.stop());
@@ -35,7 +33,6 @@ async function killCameraTracks() {
   }
 }
 
-// કેમેરા સિસ્ટમ શરૂ કરવા માટે
 async function startCameraSystem() {
   await killCameraTracks();
   try {
@@ -63,7 +60,6 @@ async function startCameraSystem() {
   }
 }
 
-// ફ્રન્ટ અને બેક કેમેરા બદલવા માટે
 function toggleCamera() {
   useFrontCamera = !useFrontCamera;
   activeZoom = 1;
@@ -71,7 +67,6 @@ function toggleCamera() {
   startCameraSystem();
 }
 
-// ઝૂમ સેટ કરવા માટે
 function applyZoomSetting(value) {
   activeZoom = parseFloat(value);
   zoomSlider.value = activeZoom;
@@ -92,7 +87,6 @@ function applyZoomSetting(value) {
 
 zoomSlider.addEventListener("input", (e) => applyZoomSetting(e.target.value));
 
-// GPS લોકેશન મેળવવા માટે
 function triggerLocationPoll() {
   if (navigator.geolocation) {
     navigator.geolocation.getCurrentPosition(
@@ -114,7 +108,6 @@ function triggerLocationPoll() {
   }
 }
 
-// OpenStreetMap API વડે અક્ષાંશ-રેખાંશ પરથી એડ્રેસ મેળવવું
 async function reverseGeocode(lat, lon) {
   try {
     const res = await fetch(
@@ -130,7 +123,6 @@ async function reverseGeocode(lat, lon) {
   }
 }
 
-// ટચ વડે પિંચ-ટુ-ઝૂમ (Pinch to Zoom) કરવા માટે
 viewWrapper.addEventListener("touchstart", (e) => {
   if (e.touches.length === 2) {
     initialTouchDist = Math.hypot(
@@ -158,14 +150,13 @@ viewWrapper.addEventListener("touchend", () => {
   initialTouchDist = 0;
 });
 
-// સમય અપડેટ કરવા માટે ઘડિયાળ
 setInterval(() => {
   const now = new Date();
   document.getElementById("lbl-time").textContent =
     now.toLocaleDateString("en-GB") + " " + now.toLocaleTimeString("en-US", { hour12: false });
 }, 1000);
 
-// ફોટો પાડવા માટેનું ફંક્શન (વેધર અને જીઓ ટેગ સ્ટેમ્પ સાથે)
+// ફોટો કૅપ્ચર કરવા માટેનું ફંક્શન
 async function performCapture() {
   if (!videoStream) return;
   shutterBtn.classList.add("disabled");
@@ -179,7 +170,6 @@ async function performCapture() {
   canvasEl.height = height;
   const ctx = canvasEl.getContext("2d");
 
-  // ડિજિટલ ઝૂમ કેનવાસ પર એપ્લાય કરવું
   if (!track.getCapabilities?.().zoom && activeZoom > 1) {
     const sw = width / activeZoom;
     const sh = height / activeZoom;
@@ -195,10 +185,12 @@ async function performCapture() {
   const now = new Date();
   const timeStr = now.toLocaleDateString("en-GB") + " " + now.toLocaleTimeString("en-US", { hour12: false });
 
+  // Location overlay box માં છેલ્લી લાઈન તરીકે 'Powered by TCM Guide Gujarat' ઉમેર્યું છે
   const lines = [
     `📍 ${readableAddress}`,
     `Lat: ${latStr}°  Long: ${lonStr}°`,
-    `Time: ${timeStr}`
+    `Time: ${timeStr}`,
+    `Powered by TCM Guide Gujarat`
   ];
 
   const maxDim = Math.max(width, height);
@@ -211,40 +203,27 @@ async function performCapture() {
   const margin = Math.round(0.025 * maxDim);
   const boxY = height - boxHeight - margin;
 
-  // ટેગ માટે કાળું બેકગ્રાઉન્ડ
+  // ઓવરલે માટે બ્લેક બેકગ્રાઉન્ડ
   ctx.fillStyle = "rgba(0,0,0,0.65)";
   ctx.fillRect(margin, boxY, boxWidth, boxHeight);
 
-  ctx.fillStyle = "#fff";
+  // લાઈન દોરવી
   lines.forEach((line, i) => {
     const textY = boxY + Math.round(0.8 * fontSize) + i * (fontSize + lineGap) + Math.round(0.85 * fontSize);
     if (i === 0) {
-      ctx.fillStyle = "#ffb300";
+      ctx.fillStyle = "#ffb300"; // એડ્રેસ માટે ઓરેન્જ કલર
       ctx.fillText(line, margin + Math.round(0.8 * fontSize), textY);
-      ctx.fillStyle = "#fff";
+    } else if (i === lines.length - 1) {
+      ctx.fillStyle = "#ffb300"; // Powered by TCM Guide Gujarat માટે પણ ઓરેન્જ/હાઇલાઇટ કલર
+      ctx.font = `bold ${fontSize}px sans-serif`;
+      ctx.fillText(line, margin + Math.round(0.8 * fontSize), textY);
     } else {
+      ctx.fillStyle = "#fff"; // બાકીના ટેક્સ્ટ માટે સફેદ કલર
+      ctx.font = `500 ${fontSize}px sans-serif`;
       ctx.fillText(line, margin + Math.round(0.8 * fontSize), textY);
     }
   });
 
-  // વોટરમાર્ક / બ્રાન્ડિંગ ટેક્સ્ટ
-  const brandText = "Powered by TCM Guide Gujarat";
-  const brandFontSize = Math.round(0.018 * maxDim);
-  ctx.font = `bold ${brandFontSize}px sans-serif`;
-
-  const textWidth = ctx.measureText(brandText).width;
-  const brandX = width - textWidth - margin - 20;
-  const brandY = margin;
-  const brandBoxWidth = textWidth + Math.round(1.5 * brandFontSize);
-  const brandBoxHeight = brandFontSize + Math.round(1.2 * brandFontSize);
-
-  ctx.fillStyle = "rgba(0,0,0,0.65)";
-  ctx.fillRect(brandX - 10, brandY, brandBoxWidth, brandBoxHeight);
-
-  ctx.fillStyle = "#ffffff";
-  ctx.fillText(brandText, brandX, brandY + brandBoxHeight / 2 + brandFontSize / 3);
-
-  // ઈમેજ બ્લોબ (Blob) બનાવવું
   canvasEl.toBlob(
     (blob) => {
       baseImageBlob = blob;
@@ -258,7 +237,7 @@ async function performCapture() {
   );
 }
 
-// ગેલેરીમાં ફોટો ડાઉનલોડ કરવા માટે
+// ડાઉનલોડ બટન પર ક્લિક કરવાથી ઈમેજ ડાઉનલોડ થાય અને Alert આવે
 function saveToGallery() {
   if (baseImageBlob) {
     const url = URL.createObjectURL(baseImageBlob);
@@ -269,11 +248,12 @@ function saveToGallery() {
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
-    alert("Image downloaded successfully!");
+    
+    // ડાઉનલોડ થઈ ગયા પછી Alert બતાવશે
+    alert("Downloaded Successfully!");
   }
 }
 
-// પેજ લોડ થતાં કેમેરા શરૂ કરવો અને PWA માટે સેવા કાર્યકર (Service Worker) રજિસ્ટર કરવું
 window.addEventListener("load", () => {
   startCameraSystem();
   if ("serviceWorker" in navigator) {
