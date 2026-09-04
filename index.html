@@ -2,529 +2,266 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 <title>📍 Geo-Tag Camera</title>
 <link rel="manifest" href="manifest.json">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#000000">
 <style>
-  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
-  body, html { width: 100%; height: 100%; overflow: hidden; background: #000; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
-  
-  /* App Shell Container */
-  #app-container { position: relative; width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: space-between; }
-
-  /* Header Section */
-  header { width: 100%; background: rgba(0, 0, 0, 0.85); text-align: center; padding: 12px 10px; z-index: 10; border-bottom: 1px solid #222; }
-  h1 { color: #fff; font-size: 1.15rem; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 6px; }
-
-  /* Camera Full-screen Viewport */
-  #camera-viewport { position: relative; flex: 1; width: 100%; display: flex; align-items: center; justify-content: center; background: #000; overflow: hidden; }
-  video { width: 100%; height: 100%; object-fit: cover; }
-
-  /* Combined Location Tag + Map Badge Overlay */
-  #geo-stamp-overlay {
-    position: absolute;
-    bottom: 16px;
-    left: 16px;
-    background: rgba(22, 22, 22, 0.85);
-    border-radius: 12px;
-    padding: 10px;
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    max-width: calc(100% - 32px);
-    box-shadow: 0 4px 15px rgba(0,0,0,0.5);
-    border: 1px solid rgba(255,255,255,0.1);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-    z-index: 5;
+  * { box-sizing: border-box; }
+  body, html {
+    margin: 0; padding: 0; width: 100%; height: 100%;
+    background-color: #000; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    overflow: hidden; user-select: none; -webkit-user-select: none;
   }
   
-  /* Left Mini Google Map Frame */
-  #mini-map-box {
-    width: 65px;
-    height: 65px;
-    border-radius: 8px;
-    overflow: hidden;
-    background: #222;
-    border: 1px solid rgba(255,255,255,0.2);
-    flex-shrink: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-  #mini-map-box img { width: 100%; height: 100%; object-fit: cover; display: none; }
-  .map-placeholder { font-size: 18px; animation: pulse 1.5s infinite; }
-
-  /* Right Text Metadata details */
-  #stamp-details { display: flex; flex-direction: column; justify-content: center; text-align: left; }
-  .loc-title { color: #ffbc00; font-weight: bold; font-size: 0.9rem; display: flex; align-items: center; gap: 4px; margin-bottom: 2px; }
-  .loc-text { color: #fff; font-size: 0.75rem; font-family: monospace; line-height: 1.4; opacity: 0.95; }
-
-  /* Controls Section */
-  #controls-panel {
-    width: 100%;
-    background: rgba(0, 0, 0, 0.85);
-    padding: 15px 20px;
-    display: flex;
-    align-items: center;
-    justify-content: space-around;
-    z-index: 10;
-    border-top: 1px solid #222;
+  #app-container {
+    position: relative; width: 100%; height: 100%;
+    display: flex; flex-direction: column; justify-content: space-between;
   }
 
-  /* Compact Adaptive Buttons */
-  .control-btn {
-    background: transparent;
-    border: none;
-    color: #fff;
-    cursor: pointer;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 5px;
-    font-size: 0.75rem;
-    font-weight: 500;
-    opacity: 0.85;
-    transition: transform 0.1s, opacity 0.2s;
+  /* Header */
+  header {
+    height: 50px; width: 100%; background: rgba(0,0,0,0.8);
+    display: flex; align-items: center; justify-content: center; z-index: 10;
   }
-  .control-btn:active { transform: scale(0.92); opacity: 1; }
-  .btn-icon-wrapper {
-    width: 44px;
-    height: 44px;
-    border-radius: 50%;
-    background: rgba(255,255,255,0.1);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-  .btn-icon-wrapper svg { width: 22px; height: 22px; fill: currentColor; }
+  header h1 { color: #fff; font-size: 1.1rem; margin: 0; font-weight: 500; display: flex; align-items: center; gap: 5px; }
 
-  /* Streamlined Capture Shutter */
-  .shutter-btn {
-    width: 66px;
-    height: 66px;
-    border-radius: 50%;
-    background: #fff;
-    border: 4px solid #000;
-    outline: 2px solid #fff;
-    cursor: pointer;
-    box-shadow: 0 0 10px rgba(0,0,0,0.5);
-    transition: transform 0.1s;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+  /* Camera Window */
+  #view-wrapper {
+    position: relative; flex: 1; width: 100%; background: #000;
+    display: flex; align-items: center; justify-content: center; overflow: hidden;
   }
-  .shutter-btn:active { transform: scale(0.9); background: #ddd; }
-
-  /* Error Alert Banner */
-  #error-banner {
-    position: absolute;
-    top: 60px;
-    left: 50%;
-    transform: translateX(-50%);
-    background: rgba(244, 67, 54, 0.9);
-    color: white;
-    padding: 8px 16px;
-    border-radius: 20px;
-    font-size: 0.8rem;
-    font-weight: bold;
-    z-index: 20;
-    display: none;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+  video {
+    width: 100%; height: 100%; object-fit: cover; transform: scale(1);
+    transition: transform 0.1s ease-out;
   }
 
-  /* Result Photo Modal Popup */
-  #result-modal {
-    position: fixed;
-    top: 0; left: 0; width: 100%; height: 100%;
-    background: rgba(0,0,0,0.95);
-    z-index: 100;
-    display: none;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    padding: 16px;
+  /* Overlay UI */
+  #overlay-box {
+    position: absolute; bottom: 15px; left: 15px; right: 15px;
+    background: rgba(0, 0, 0, 0.65); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
+    border-radius: 12px; padding: 12px 16px; color: #fff;
+    display: flex; flex-direction: column; gap: 4px; pointer-events: none; z-index: 5;
   }
-  #result-modal h3 { color: #fff; font-size: 1.1rem; margin-bottom: 12px; }
-  #capturedImage { max-width: 100%; max-height: 65vh; border-radius: 12px; border: 2px solid #333; object-fit: contain; }
-  .modal-actions { display: flex; gap: 12px; margin-top: 16px; width: 100%; max-width: 320px; }
-  .dl-link {
-    flex: 1;
-    text-align: center;
-    padding: 12px;
-    border-radius: 8px;
-    font-size: 0.85rem;
-    font-weight: bold;
-    text-decoration: none;
-    color: #fff;
-    transition: transform 0.1s;
+  .loc-title { color: #ffb300; font-weight: bold; font-size: 0.95rem; display: flex; align-items: center; gap: 4px; }
+  .loc-details { color: #e0e0e0; font-size: 0.8rem; margin: 0; font-family: monospace; line-height: 1.4; }
+
+  /* Zoom Slider */
+  #zoom-widget {
+    position: absolute; right: 15px; top: 50%; transform: translateY(-50%);
+    display: flex; flex-direction: column; align-items: center; gap: 8px; z-index: 6;
+    background: rgba(0,0,0,0.5); padding: 12px 6px; border-radius: 20px;
   }
-  .dl-link:active { transform: scale(0.95); }
-  .dl-png { background: #0076FF; }
-  .dl-jpg { background: #FF9500; }
-  .close-modal-btn {
-    position: absolute;
-    top: 16px;
-    right: 16px;
-    background: rgba(255,255,255,0.2);
-    color: #fff;
-    border: none;
-    width: 36px;
-    height: 36px;
-    border-radius: 50%;
-    font-size: 1.1rem;
-    font-weight: bold;
-    cursor: pointer;
+  #zoom-slider {
+    -webkit-appearance: slider-vertical; width: 8px; height: 120px; background: #555; outline: none; border-radius: 4px;
+  }
+  .zoom-label { color: #fff; font-size: 11px; font-weight: bold; font-family: monospace; }
+
+  /* Controls Panel */
+  #controls {
+    height: 100px; width: 100%; background: #000;
+    display: flex; align-items: center; justify-content: space-around; padding: 0 20px; z-index: 10;
+  }
+  .ctrl-btn {
+    background: none; border: none; color: #fff; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 6px; cursor: pointer; font-size: 12px; min-width: 70px;
+  }
+  .ctrl-btn svg { width: 26px; height: 26px; fill: currentColor; transition: transform 0.2s; }
+  .ctrl-btn:active svg { transform: scale(0.9); }
+  
+  /* Shutter Ring & Circle */
+  #shutter-btn {
+    width: 68px; height: 68px; border-radius: 50%; border: 4px solid #fff;
+    background: transparent; display: flex; align-items: center; justify-content: center; padding: 0; cursor: pointer;
+  }
+  #shutter-btn div { width: 52px; height: 52px; background: #fff; border-radius: 50%; transition: background 0.1s, transform 0.1s; }
+  #shutter-btn:active div { background: #ccc; transform: scale(0.92); }
+  #shutter-btn.disabled { opacity: 0.5; pointer-events: none; }
+
+  /* Status and Toast Message */
+  #toast {
+    position: absolute; top: 70px; left: 50%; transform: translateX(-50%);
+    background: rgba(229, 57, 53, 0.9); color: white; padding: 10px 20px;
+    border-radius: 20px; font-size: 13px; z-index: 20; display: none; text-align: center; max-width: 85%;
   }
 
-  /* Pulse animation */
-  @keyframes pulse {
-    0% { transform: scale(0.95); opacity: 0.5; }
-    50% { transform: scale(1.05); opacity: 1; }
-    100% { transform: scale(0.95); opacity: 0.5; }
-  }
+  /* Hidden Canvas for capture rendering */
+  canvas { display: none; }
 
-  /* Landscape Mode Optimizations */
+  /* Landscape Responsive Optimization */
   @media (orientation: landscape) {
     #app-container { flex-direction: row; }
-    header { position: absolute; top: 0; left: 0; width: calc(100% - 90px); border-bottom: none; background: linear-gradient(to bottom, rgba(0,0,0,0.7), rgba(0,0,0,0)); }
-    #camera-viewport { width: 100%; height: 100%; }
-    #controls-panel {
-      width: 90px;
-      height: 100%;
-      flex-direction: column;
-      justify-content: center;
-      gap: 30px;
-      padding: 10px;
-      border-top: none;
-      border-left: 1px solid #222;
-    }
-    #geo-stamp-overlay { bottom: 16px; left: 16px; max-width: calc(100% - 120px); }
-    #result-modal #capturedImage { max-height: 55vh; }
+    header { position: absolute; top: 0; left: 0; width: calc(100% - 100px); background: linear-gradient(to bottom, rgba(0,0,0,0.7), transparent); }
+    #controls { width: 100px; height: 100%; flex-direction: column; padding: 20px 0; justify-content: space-around; }
+    #zoom-widget { right: 115px; }
+    #overlay-box { bottom: 15px; left: 15px; right: 115px; max-width: 450px; }
+    #toast { top: 20px; left: calc(50% - 50px); }
   }
 </style>
 </head>
 <body>
 
 <div id="app-container">
-  <!-- Header -->
   <header>
     <h1>📍 Geo-Tag Camera</h1>
   </header>
 
-  <!-- Error Notification Box -->
-  <div id="error-banner"></div>
-
-  <!-- Main Full Screen Camera Frame -->
-  <div id="camera-viewport">
-    <video autoplay id="video" playsinline></video>
+  <div id="view-wrapper" id="view-wrapper">
+    <video autoplay playsinline id="video"></video>
     
-    <!-- Geo Stamp Metadata Panel -->
-    <div id="geo-stamp-overlay">
-      <div id="mini-map-box">
-        <span class="map-placeholder">📍</span>
-        <img id="map-img" alt="Google Map View">
-      </div>
-      <div id="stamp-details">
-        <div class="loc-title">📍 <span id="lbl-address">Locating Area...</span></div>
-        <div class="loc-text" id="lbl-coords">Lat: –, Lon: –</div>
-        <div class="loc-text" id="lbl-datetime">Fetching system time...</div>
-      </div>
+    <div id="overlay-box">
+      <div class="loc-title"><span style="color:#ff3d00">📍</span> <span id="lbl-address">Locating...</span></div>
+      <div class="loc-details">Lat: <span id="lbl-lat">--</span>&deg;&nbsp;&nbsp;Long: <span id="lbl-lon">--</span>&deg;</div>
+      <div class="loc-details">Time: <span id="lbl-time">--</span></div>
+    </div>
+
+    <div id="zoom-widget">
+      <span class="zoom-label" id="zoom-value">1.0x</span>
+      <input type="range" id="zoom-slider" min="1" max="5" step="0.1" value="1">
     </div>
   </div>
 
-  <!-- Floating Footer Actions Panel -->
-  <div id="controls-panel">
-    <!-- Camera Switch Toggle -->
-    <button class="control-btn" onclick="switchCamera()">
-      <div class="btn-icon-wrapper">
-        <svg viewBox="0 0 24 24"><path d="M19 8l-4 4h3c0 3.31-2.69 6-6 6-1.01 0-1.97-.25-2.8-.7l-1.46 1.46C8.97 19.54 10.43 20 12 20c4.42 0 8-3.58 8-8h3l-4-4zM6 12c0-3.31 2.69-6 6-6 1.01 0 1.97.25 2.8.7l1.46-1.46C15.03 4.46 13.57 4 12 4c-4.42 0-8 3.58-8 8H1l4 4 4-4H6z"/></svg>
-      </div>
+  <div id="controls">
+    <!-- Switch Camera Button -->
+    <button class="ctrl-btn" onclick="toggleCamera()">
+      <svg viewBox="0 0 24 24"><path d="M19 8l-4 4h3c0 3.31-2.69 6-6 6-1.01 0-1.97-.25-2.8-.7l-1.46 1.46C8.97 19.54 10.43 20 12 20c4.42 0 8-3.58 8-8h3l-4-4zM6 12c0-3.31 2.69-6 6-6 1.01 0 1.97.25 2.8.7l1.46-1.46C15.03 4.46 13.57 4 12 4c-4.42 0-8 3.58-8 8H1l4 4 4-4H6z"/></svg>
       <span>Switch</span>
     </button>
 
-    <!-- Center White Snap Shutter -->
-    <button class="shutter-btn" onclick="captureImage()" aria-label="Take Photo"></button>
+    <!-- Main Shutter Button -->
+    <button id="shutter-btn" onclick="performCapture()"><div></div></button>
 
-    <!-- Watermark Brand Stamp (Footer Right) -->
-    <div style="width:44px; text-align:center; font-size:10px; color:#aaa; font-weight:bold; line-height:1.2;">
-      <img src="https://i.postimg.cc/8cbWz0qr/APP-LOGO.png" style="width:20px; height:20px; border-radius:4px; margin-bottom:2px;" alt="Logo"><br>TCM
-    </div>
+    <!-- Direct Gallery Download Button -->
+    <button class="ctrl-btn" id="dl-btn" onclick="saveToGallery()" style="opacity: 0.5; pointer-events: none;">
+      <svg viewBox="0 0 24 24"><path d="M19 12v7H5v-7H3v7c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2v-7h-2zm-6 .67l2.59-2.58L17 11.5l-5 5-5-5 1.41-1.41L11 12.67V3h2v9.67z"/></svg>
+      <span>Download</span>
+    </button>
   </div>
 </div>
 
-<!-- Invisible Rendering Engine Canvas -->
-<canvas id="canvas" style="display:none;"></canvas>
-
-<!-- Captured Photo Modal Viewer -->
-<div id="result-modal">
-  <button class="close-modal-btn" onclick="closeModal()">×</button>
-  <h3>📷 Captured Image</h3>
-  <img id="capturedImage" alt="Captured geo-tagged image">
-  <div class="modal-actions">
-    <a class="dl-link dl-png" id="downloadPngBtn" download="captured_image.png">⬇️ PNG</a>
-    <a class="dl-link dl-jpg" id="downloadJpgBtn" download="captured_image.jpg">⬇️ JPG</a>
-  </div>
-</div>
+<div id="toast"></div>
+<canvas id="canvas"></canvas>
 
 <script>
-let video, canvas, stream, useFront = false;
-let currentCoords = null;
-let currentAddress = "Locating...";
+let videoStream = null;
+let useFrontCamera = false;
+let geoPosition = null;
+let readableAddress = "Fetching area data...";
+let activeZoom = 1.0;
+let maxZoomSupported = 1.0;
+let baseImageBlob = null;
 
-function displayError(msg) {
-  console.error(msg);
-  const banner = document.getElementById("error-banner");
-  banner.textContent = msg;
-  banner.style.display = "block";
-  setTimeout(() => { banner.style.display = "none"; }, 5000);
-}
+// Pinch zoom tracking
+let initialTouchDist = 0;
 
-// Request true full screen for standalone standalone layout look
-function requestFullScreenShell() {
-  if (document.documentElement.requestFullscreen) {
-    document.documentElement.requestFullscreen().catch(() => {});
+const videoEl = document.getElementById("video");
+const canvasEl = document.getElementById("canvas");
+const zoomSlider = document.getElementById("zoom-slider");
+const zoomValueDisplay = document.getElementById("zoom-value");
+const toastEl = document.getElementById("toast");
+const dlBtn = document.getElementById("dl-btn");
+const shutterBtn = document.getElementById("shutter-btn");
+
+function showToast(message, isPersistent = false) {
+  toastEl.textContent = message;
+  toastEl.style.display = "block";
+  if (!isPersistent) {
+    setTimeout(() => { toastEl.style.display = "none"; }, 3500);
   }
 }
 
-async function initCameraStream() {
-  if(stream) {
-    stream.getTracks().forEach(t => t.stop());
-  }
-  video = document.getElementById("video");
-  canvas = document.getElementById("canvas");
-  
-  if (!navigator.mediaDevices?.getUserMedia) {
-    displayError("Camera API not supported on this browser.");
-    return;
-  }
-  
-  try {
-    const constraints = {
-      video: {
-        facingMode: useFront ? "user" : "environment",
-        width: { ideal: 1920 },
-        height: { ideal: 1080 }
-      },
-      audio: false
-    };
-    stream = await navigator.mediaDevices.getUserMedia(constraints);
-    video.srcObject = stream;
-    // Keep calling coordinates check
-    triggerLocationUpdates();
-  } catch (err) {
-    displayError("Camera Stream Access Denied: " + err.message);
+function clearToast() {
+  toastEl.style.display = "none";
+}
+
+// Complete resource deallocation to address standalone PWA lockups
+async function killCameraTracks() {
+  if (videoStream) {
+    videoStream.getTracks().forEach(track => track.stop());
+    videoStream = null;
+    videoEl.srcObject = null;
+    await new Promise(resolve => setTimeout(resolve, 200)); // Stability padding
   }
 }
 
-function switchCamera() {
-  useFront = !useFront;
-  initCameraStream();
-}
-
-function triggerLocationUpdates() {
-  if (!navigator.geolocation) {
-    displayError("GPS Tracking Hardware unavailable.");
-    return;
-  }
+async function startCameraSystem() {
+  await killCameraTracks();
+  clearToast();
   
-  // Watch continuous position tracking
-  navigator.geolocation.watchPosition(async (position) => {
-    currentCoords = position.coords;
-    currentAddress = await fetchReverseGeocode(position.coords.latitude, position.coords.longitude);
-    renderOverlayUI();
-  }, (error) => {
-    displayError("GPS signal dropped: " + error.message);
-  }, {
-    enableHighAccuracy: true,
-    maximumAge: 0,
-    timeout: 10000
-  });
-}
-
-async function fetchReverseGeocode(lat, lon) {
-  try {
-    const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lon}`);
-    const data = await response.json();
-    const addr = data.address || {};
-    const segment = addr.village || addr.hamlet || addr.suburb || addr.locality || addr.town || addr.city || "Gujarat Area";
-    const state = addr.state || "Gujarat";
-    const country = addr.country || "India";
-    return `${segment}, ${state}, ${country}`;
-  } catch {
-    return "Vasad, Gujarat, India"; // Fallback safe match
-  }
-}
-
-function renderOverlayUI() {
-  if (!currentCoords) return;
-  const lat = currentCoords.latitude.toFixed(6);
-  const lon = currentCoords.longitude.toFixed(6);
-  
-  document.getElementById("lbl-address").textContent = currentAddress;
-  document.getElementById("lbl-coords").textContent = `Lat: ${lat}°  Long: ${lon}°`;
-  
-  const now = new Date();
-  const formatTime = now.toLocaleDateString('en-GB') + ' ' + now.toLocaleTimeString('en-GB');
-  document.getElementById("lbl-datetime").textContent = `Time: ${formatTime}`;
-  
-  // Dynamic Map Insertion Left Frame
-  const mapImg = document.getElementById("map-img");
-  const placeholder = document.querySelector(".map-placeholder");
-  // Render using OpenStreetMap static frame API as a fast stable engine
-  mapImg.src = `https://static-maps.yandex.ru/1.x/?ll=${lon},${lat}&z=14&l=map&size=65,65`;
-  mapImg.onload = () => {
-    placeholder.style.display = "none";
-    mapImg.style.display = "block";
-  };
-}
-
-async function captureImage() {
-  if (!stream || !currentCoords) {
-    displayError("Camera or GPS sync is not active yet.");
-    return;
-  }
-  
-  requestFullScreenShell();
-
-  const track = stream.getVideoTracks()[0];
-  const settings = track.getSettings();
-  const w = settings.width || video.videoWidth;
-  const h = settings.height || video.videoHeight;
-
-  canvas.width = w;
-  canvas.height = h;
-  const ctx = canvas.getContext("2d");
-  
-  // Draw base live snapshot frame
-  ctx.drawImage(video, 0, 0, w, h);
-
-  // Dynamic calculations relative to frame quality resolution size
-  const scaleFactor = Math.max(w, h) / 1000; 
-  const boxPadding = 16 * scaleFactor;
-  const lineGap = 24 * scaleFactor;
-  
-  const lat = currentCoords.latitude.toFixed(6);
-  const lon = currentCoords.longitude.toFixed(6);
-  const now = new Date();
-  const formatTime = now.toLocaleDateString('en-GB') + ' ' + now.toLocaleTimeString('en-GB');
-
-  // Text contents strings assembly arrays
-  const lines = [
-    `📍 ${currentAddress}`,
-    `Lat: ${lat}°  Long: ${lon}°`,
-    `Time: ${formatTime}`
-  ];
-
-  ctx.font = `bold ${Math.round(16 * scaleFactor)}px sans-serif`;
-  const textWidthArr = lines.map(l => ctx.measureText(l).width);
-  const maxTextW = Math.max(...textWidthArr);
-  
-  // Dimensions adjustments for inserting mini square map on left inside canvas
-  const innerMapSize = Math.round(65 * scaleFactor);
-  const totalBoxW = maxTextW + innerMapSize + (boxPadding * 3);
-  const totalBoxH = Math.max(lines.length * lineGap, innerMapSize) + (boxPadding * 2);
-  
-  // Bottom Left placement matching requests constraints
-  const boxX = 20 * scaleFactor;
-  const boxY = h - totalBoxH - (20 * scaleFactor);
-
-  // Draw Translucent Black Backdrop Overlay Mask container
-  ctx.fillStyle = "rgba(22, 22, 22, 0.85)";
-  ctx.beginPath();
-  ctx.roundRect(boxX, boxY, totalBoxW, totalBoxH, 12 * scaleFactor);
-  ctx.fill();
-
-  // Draw Static Map onto canvas left side inside frame
-  try {
-    const mapRenderElement = new Image();
-    mapRenderElement.crossOrigin = "anonymous";
-    mapRenderElement.src = `https://static-maps.yandex.ru/1.x/?ll=${lon},${lat}&z=14&l=map&size=150,150`;
-    await new Promise((resolve) => {
-      mapRenderElement.onload = () => {
-        ctx.drawImage(mapRenderElement, boxX + boxPadding, boxY + boxPadding, innerMapSize, innerMapSize);
-        resolve();
-      };
-      mapRenderElement.onerror = () => resolve(); // carry on if crossOrigin blocks
-    });
-  } catch(e) { console.log(e); }
-
-  // Draw Text Metadata Strings Right adjustments
-  ctx.fillStyle = "#ffffff";
-  const textStartX = boxX + boxPadding + innerMapSize + boxPadding;
-  
-  lines.forEach((line, idx) => {
-    if(idx === 0) ctx.fillStyle = "#ffbc00"; // Location name heading highlighting
-    else ctx.fillStyle = "#ffffff";
-    
-    ctx.fillText(line, textStartX, boxY + boxPadding + (idx * lineGap) + (14 * scaleFactor));
-  });
-
-  // Top Right Branding Watermark এম্বিড
-  const wmText = "Powered by TCM Guide Gujarat";
-  ctx.font = `bold ${Math.round(14 * scaleFactor)}px sans-serif`;
-  const wmWidth = ctx.measureText(wmText).width;
-  const wmLogoSize = Math.round(20 * scaleFactor);
-  
-  const wmX = w - wmWidth - wmLogoSize - (40 * scaleFactor);
-  const wmY = 30 * scaleFactor;
-
-  ctx.fillStyle = "rgba(0,0,0,0.6)";
-  ctx.beginPath();
-  ctx.roundRect(wmX - 8, wmY - 6, wmWidth + wmLogoSize + 24, wmLogoSize + 12, 6 * scaleFactor);
-  ctx.fill();
-
-  try {
-    const brandingLogo = new Image();
-    brandingLogo.crossOrigin = "anonymous";
-    brandingLogo.src = "https://i.postimg.cc/8cbWz0qr/APP-LOGO.png";
-    await new Promise((res) => {
-      brandingLogo.onload = () => {
-        ctx.drawImage(brandingLogo, wmX, wmY, wmLogoSize, wmLogoSize);
-        res();
-      };
-      brandingLogo.onerror = () => res();
-    });
-  } catch(e) {}
-
-  ctx.fillStyle = "#ffffff";
-  ctx.fillText(wmText, wmX + wmLogoSize + 10, wmY + wmLogoSize - 4);
-
-  // Convert to high resolution exports download URLs
-  const pngURL = canvas.toDataURL("image/png");
-  const jpgURL = canvas.toDataURL("image/jpeg", 0.95);
-
-  document.getElementById("capturedImage").src = pngURL;
-  document.getElementById("downloadPngBtn").href = pngURL;
-  document.getElementById("downloadJpgBtn").href = jpgURL;
-  
-  // Show popup modal overlay
-  document.getElementById("result-modal").style.display = "flex";
-}
-
-function closeModal() {
-  document.getElementById("result-modal").style.display = "none";
-}
-
-// Keep updating current clock live time dynamically
-setInterval(() => {
-  if(!currentCoords) return;
-  const now = new Date();
-  document.getElementById("lbl-datetime").textContent = `Time: ` + now.toLocaleDateString('en-GB') + ' ' + now.toLocaleTimeString('en-GB');
-}, 1000);
-
-window.addEventListener("load", () => {
-  initCameraStream();
-  // Request full screen shell window layout on user interactive screens snap taps
-  document.body.addEventListener("click", () => {
-    if(!window.screenTop && !window.screenY) {
-       // not fullscreen
+  const constraints = {
+    video: {
+      facingMode: useFrontCamera ? "user" : "environment",
+      width: { ideal: 1920 },
+      height: { ideal: 1080 }
     }
-  }, { once: true });
-});
-</script>
+  };
 
-</body>
-</html>
+  try {
+    videoStream = await navigator.mediaDevices.getUserMedia(constraints);
+    videoEl.srcObject = videoStream;
+    
+    // Evaluate hardware Zoom architecture
+    const videoTrack = videoStream.getVideoTracks()[0];
+    const capabilities = videoTrack.getCapabilities ? videoTrack.getCapabilities() : {};
+    
+    if (capabilities.zoom) {
+      zoomSlider.min = capabilities.zoom.min || 1;
+      zoomSlider.max = capabilities.zoom.max || 5;
+      zoomSlider.step = capabilities.zoom.step || 0.1;
+      zoomSlider.value = activeZoom > capabilities.zoom.max ? capabilities.zoom.max : activeZoom;
+      maxZoomSupported = capabilities.zoom.max;
+    } else {
+      // Fallback architecture for simulated viewport zoom scaling
+      zoomSlider.min = 1;
+      zoomSlider.max = 5;
+      zoomSlider.step = 0.1;
+      maxZoomSupported = 5;
+    }
+    
+    triggerLocationPoll();
+  } catch (err) {
+    showToast("Camera Access Error: Hardware source could not be initialized.", true);
+    console.error(err);
+  }
+}
+
+function toggleCamera() {
+  useFrontCamera = !useFrontCamera;
+  activeZoom = 1.0;
+  applyZoomSetting(1.0);
+  startCameraSystem();
+}
+
+// Zoom Management (Supports native hardware manipulation & dynamic CSS pipeline fallback)
+function applyZoomSetting(val) {
+  activeZoom = parseFloat(val);
+  zoomSlider.value = activeZoom;
+  zoomValueDisplay.textContent = activeZoom.toFixed(1) + "x";
+
+  if (videoStream) {
+    const track = videoStream.getVideoTracks()[0];
+    if (track.getCapabilities?.().zoom) {
+      track.applyConstraints({ advanced: [{ zoom: activeZoom }] }).catch(() => {});
+      videoEl.style.transform = `scale(1)`; // Reset CSS context if hardware absorbs change
+      return;
+    }
+  }
+  // Viewport emulation pipeline
+  videoEl.style.transform = `scale(${activeZoom})`;
+}
+
+zoomSlider.addEventListener("input", (e) => {
+  applyZoomSetting(e.target.value);
+});
+
+// Touch event registration for seamless multi-touch pinch configuration
+const viewWrapper = document.getElementById("view-wrapper");
+viewWrapper.addEventListener("touchstart", (e) => {
+  if (e.touches.length === 2) {
+    initialTouchDist = Math.hypot(
+      e.touches[0].clientX - e.touches[1].clientX,
+      e.touches[0].clientY - e.touches[1].clientY
+    );
+  }
+}, { passive: true });
+
