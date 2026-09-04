@@ -123,6 +123,7 @@ async function reverseGeocode(lat, lon) {
   }
 }
 
+// Pinch-to-zoom Touch Events (Fixed e.touches[0] / e.touches[1])
 viewWrapper.addEventListener("touchstart", (e) => {
   if (e.touches.length === 2) {
     initialTouchDist = Math.hypot(
@@ -156,7 +157,6 @@ setInterval(() => {
     now.toLocaleDateString("en-GB") + " " + now.toLocaleTimeString("en-US", { hour12: false });
 }, 1000);
 
-// ફોટો કૅપ્ચર કરવા માટેનું ફંક્શન
 async function performCapture() {
   if (!videoStream) return;
   shutterBtn.classList.add("disabled");
@@ -185,7 +185,6 @@ async function performCapture() {
   const now = new Date();
   const timeStr = now.toLocaleDateString("en-GB") + " " + now.toLocaleTimeString("en-US", { hour12: false });
 
-  // Location overlay box માં છેલ્લી લાઈન તરીકે 'Powered by TCM Guide Gujarat' ઉમેર્યું છે
   const lines = [
     `📍 ${readableAddress}`,
     `Lat: ${latStr}°  Long: ${lonStr}°`,
@@ -203,22 +202,21 @@ async function performCapture() {
   const margin = Math.round(0.025 * maxDim);
   const boxY = height - boxHeight - margin;
 
-  // ઓવરલે માટે બ્લેક બેકગ્રાઉન્ડ
   ctx.fillStyle = "rgba(0,0,0,0.65)";
   ctx.fillRect(margin, boxY, boxWidth, boxHeight);
 
-  // લાઈન દોરવી
   lines.forEach((line, i) => {
     const textY = boxY + Math.round(0.8 * fontSize) + i * (fontSize + lineGap) + Math.round(0.85 * fontSize);
     if (i === 0) {
-      ctx.fillStyle = "#ffb300"; // એડ્રેસ માટે ઓરેન્જ કલર
+      ctx.fillStyle = "#ffb300";
+      ctx.font = `500 ${fontSize}px sans-serif`;
       ctx.fillText(line, margin + Math.round(0.8 * fontSize), textY);
     } else if (i === lines.length - 1) {
-      ctx.fillStyle = "#ffb300"; // Powered by TCM Guide Gujarat માટે પણ ઓરેન્જ/હાઇલાઇટ કલર
+      ctx.fillStyle = "#ffb300";
       ctx.font = `bold ${fontSize}px sans-serif`;
       ctx.fillText(line, margin + Math.round(0.8 * fontSize), textY);
     } else {
-      ctx.fillStyle = "#fff"; // બાકીના ટેક્સ્ટ માટે સફેદ કલર
+      ctx.fillStyle = "#fff";
       ctx.font = `500 ${fontSize}px sans-serif`;
       ctx.fillText(line, margin + Math.round(0.8 * fontSize), textY);
     }
@@ -237,7 +235,6 @@ async function performCapture() {
   );
 }
 
-// ડાઉનલોડ બટન પર ક્લિક કરવાથી ઈમેજ ડાઉનલોડ થાય અને Alert આવે
 function saveToGallery() {
   if (baseImageBlob) {
     const url = URL.createObjectURL(baseImageBlob);
@@ -249,7 +246,6 @@ function saveToGallery() {
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
     
-    // ડાઉનલોડ થઈ ગયા પછી Alert બતાવશે
     alert("Downloaded Successfully!");
   }
 }
