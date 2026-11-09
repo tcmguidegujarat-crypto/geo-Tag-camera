@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="gu">
 <head>
@@ -5,160 +6,311 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Geo-Tag Camera</title>
   <link rel="manifest" href="manifest.json">
+
   <style>
     * { box-sizing: border-box; }
+
     body, html {
-      margin: 0; padding: 0;
-      width: 100%; height: 100%;
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
       background: #000;
       font-family: sans-serif;
       overflow: hidden;
       user-select: none;
       -webkit-user-select: none;
     }
+
     #app {
       position: relative;
-      width: 100%; height: 100%;
-      display: flex; flex-direction: column;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
       justify-content: space-between;
     }
+
     header {
-      height: 50px; width: 100%;
+      height: 50px;
+      width: 100%;
       background: rgba(0, 0, 0, .8);
-      display: flex; align-items: center; justify-content: center;
+      display: flex;
+      align-items: center;
+      justify-content: center;
       z-index: 10;
     }
-    header h1 { color: #fff; font-size: 1.1rem; margin: 0; font-weight: 500; }
+
+    header h1 {
+      color: #fff;
+      font-size: 1.1rem;
+      margin: 0;
+      font-weight: 500;
+    }
+
     #view-wrapper {
-      position: relative; flex: 1; width: 100%;
+      position: relative;
+      flex: 1;
+      width: 100%;
       background: #000;
-      display: flex; align-items: center; justify-content: center;
+      display: flex;
+      align-items: center;
+      justify-content: center;
       overflow: hidden;
     }
+
     video {
-      width: 100%; height: 100%;
+      width: 100%;
+      height: 100%;
       object-fit: cover;
       transition: transform .1s ease-out;
     }
+
     #overlay-box {
-      position: absolute; bottom: 15px; left: 15px; right: 15px;
+      position: absolute;
+      bottom: 15px;
+      left: 15px;
+      right: 15px;
       background: rgba(0, 0, 0, .65);
       backdrop-filter: blur(4px);
-      border-radius: 12px; padding: 12px;
-      color: #fff; pointer-events: none;
+      border-radius: 12px;
+      padding: 12px;
+      color: #fff;
+      pointer-events: none;
       z-index: 5;
-      display: flex; flex-direction: column; gap: 4px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
     }
-    .loc-title { color: #ffb300; font-weight: 700; font-size: .95rem; }
-    .loc-details { color: #e0e0e0; font-size: .8rem; font-family: monospace; }
-    .brand-watermark { color: #ffb300; font-weight: bold; font-size: .85rem; margin-top: 2px; }
+
+    .loc-title {
+      color: #ffb300;
+      font-weight: 700;
+      font-size: .95rem;
+    }
+
+    .loc-details {
+      color: #e0e0e0;
+      font-size: .8rem;
+      font-family: monospace;
+    }
+
+    .brand-watermark {
+      color: #ffb300;
+      font-weight: bold;
+      font-size: .85rem;
+      margin-top: 2px;
+    }
+
     #zoom-widget {
-      position: absolute; right: 15px; top: 50%;
+      position: absolute;
+      right: 15px;
+      top: 50%;
       transform: translateY(-50%);
-      display: flex; flex-direction: column; align-items: center; gap: 8px;
-      z-index: 6; background: rgba(0, 0, 0, .5);
-      padding: 12px 6px; border-radius: 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      z-index: 6;
+      background: rgba(0, 0, 0, .5);
+      padding: 12px 6px;
+      border-radius: 20px;
     }
+
     #zoom-slider {
       -webkit-appearance: slider-vertical;
-      width: 8px; height: 120px;
-      background: #555; outline: 0; border-radius: 4px;
+      width: 8px;
+      height: 120px;
+      background: #555;
+      outline: 0;
+      border-radius: 4px;
     }
-    .zoom-label { color: #fff; font-size: 11px; font-family: monospace; }
+
+    .zoom-label {
+      color: #fff;
+      font-size: 11px;
+      font-family: monospace;
+    }
+
     #controls {
-      height: 100px; width: 100%;
+      height: 100px;
+      width: 100%;
       background: #000;
-      display: flex; align-items: center; justify-content: space-around;
-      padding: 0 20px; z-index: 10;
+      display: flex;
+      align-items: center;
+      justify-content: space-around;
+      padding: 0 20px;
+      z-index: 10;
     }
+
     .ctrl-btn {
-      background: none; border: none; color: #fff;
-      display: flex; flex-direction: column; align-items: center; gap: 6px;
-      cursor: pointer; font-size: 12px; min-width: 70px;
+      background: none;
+      border: none;
+      color: #fff;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      cursor: pointer;
+      font-size: 12px;
+      min-width: 70px;
     }
-    .ctrl-btn svg { width: 26px; height: 26px; fill: currentColor; }
+
+    .ctrl-btn svg {
+      width: 26px;
+      height: 26px;
+      fill: currentColor;
+    }
+
     #shutter-btn {
-      width: 68px; height: 68px;
-      border-radius: 50%; border: 4px solid #fff;
+      width: 68px;
+      height: 68px;
+      border-radius: 50%;
+      border: 4px solid #fff;
       background: transparent;
-      display: flex; align-items: center; justify-content: center;
+      display: flex;
+      align-items: center;
+      justify-content: center;
       cursor: pointer;
     }
-    #shutter-btn div { width: 52px; height: 52px; background: #fff; border-radius: 50%; }
-    #shutter-btn.disabled { opacity: .5; pointer-events: none; }
-    #toast {
-      position: absolute; top: 70px; left: 50%;
-      transform: translateX(-50%);
-      background: rgba(229, 57, 53, .9); color: #fff;
-      padding: 10px 20px; border-radius: 20px;
-      font-size: 13px; z-index: 20; display: none;
+
+    #shutter-btn div {
+      width: 52px;
+      height: 52px;
+      background: #fff;
+      border-radius: 50%;
     }
+
+    #shutter-btn.disabled {
+      opacity: .5;
+      pointer-events: none;
+    }
+
+    #toast {
+      position: absolute;
+      top: 70px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(229, 57, 53, .9);
+      color: #fff;
+      padding: 10px 20px;
+      border-radius: 20px;
+      font-size: 13px;
+      z-index: 20;
+      display: none;
+    }
+
     canvas { display: none; }
+
     @media (orientation: landscape) {
-      #app { flex-direction: row; }
+      #app {
+        flex-direction: row;
+      }
+
       header {
-        position: absolute; top: 0; left: 0;
+        position: absolute;
+        top: 0;
+        left: 0;
         width: calc(100% - 100px);
         background: linear-gradient(to bottom, rgba(0, 0, 0, .7), transparent);
       }
-      #controls { width: 100px; height: 100%; flex-direction: column; padding: 20px 0; }
-      #zoom-widget { right: 115px; }
-      #overlay-box { bottom: 15px; left: 15px; right: 115px; max-width: 450px; }
+
+      #controls {
+        width: 100px;
+        height: 100%;
+        flex-direction: column;
+        padding: 20px 0;
+      }
+
+      #zoom-widget {
+        right: 115px;
+      }
+
+      #overlay-box {
+        bottom: 15px;
+        left: 15px;
+        right: 115px;
+        max-width: 450px;
+      }
     }
   </style>
 </head>
+
 <body>
 
   <div id="app">
+
     <header>
       <h1>📍 Geo-Tag Camera</h1>
     </header>
 
     <div id="view-wrapper">
+
       <video id="video" autoplay playsinline></video>
 
       <div id="overlay-box">
-        <div class="loc-title" id="lbl-address">📍 Fetching location...</div>
+
+        <div class="loc-title" id="lbl-address">
+          📍 Fetching location...
+        </div>
+
         <div class="loc-details">
           Lat: <span id="lbl-lat">--</span>° &nbsp;&nbsp;
           Long: <span id="lbl-lon">--</span>°
         </div>
+
         <div class="loc-details">
           Time: <span id="lbl-time">--</span>
         </div>
+
         <div class="brand-watermark">
           Powered by TCM Guide Gujarat
         </div>
+
       </div>
 
       <div id="zoom-widget">
-        <input type="range" id="zoom-slider" min="1" max="5" step="0.1" value="1">
+        <input type="range" id="zoom-slider"
+          min="1" max="5" step="0.1" value="1">
+
         <span class="zoom-label" id="zoom-value">1.0x</span>
       </div>
 
       <div id="toast"></div>
+
     </div>
 
     <div id="controls">
+
       <button class="ctrl-btn" id="switch-btn" onclick="toggleCamera()">
-        <svg viewBox="0 0 24 24"><path d="M12 6v3l4-4-4-4v3c-4.42 0-8 3.58-8 8 0 1.57.46 3.03 1.24 4.26L6.7 14.8C6.25 13.95 6 13 6 12c0-3.31 2.69-6 6-6zm6.76 1.74L17.3 9.2c.45.85.7 1.8.7 2.8 0 3.31-2.69 6-6 6v-3l-4 4 4 4v-3c4.42 0-8-3.58 8-8 0-1.57-.46-3.03-1.24-4.26z"/></svg>
+        <svg viewBox="0 0 24 24">
+          <path d="M12 6v3l4-4-4-4v3c-4.42 0-8 3.58-8 8 0 1.57.46 3.03 1.24 4.26L6.7 14.8C6.25 13.95 6 13 6 12c0-3.31 2.69-6 6-6zm6.76 1.74L17.3 9.2c.45.85.7 1.8.7 2.8 0 3.31-2.69 6-6 6v-3l-4 4 4 4v-3c4.42 0 8-3.58 8-8 0-1.57-.46-3.03-1.24-4.26z"/>
+        </svg>
         Switch
       </button>
-      
+
       <div id="shutter-btn" onclick="performCapture()">
         <div></div>
       </div>
 
-      <button class="ctrl-btn" id="dl-btn" onclick="saveToGallery()" style="opacity: 0.5; pointer-events: none;">
-        <svg viewBox="0 0 24 24"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
+      <button class="ctrl-btn" id="dl-btn"
+        onclick="saveToGallery()"
+        style="opacity: 0.5; pointer-events: none;">
+
+        <svg viewBox="0 0 24 24">
+          <path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/>
+        </svg>
+
         Download
       </button>
+
     </div>
   </div>
 
   <canvas id="canvas"></canvas>
 
   <script>
+
     let videoStream = null;
     let useFrontCamera = false;
     let geoPosition = null;
@@ -167,6 +319,9 @@
     let maxZoomSupported = 5;
     let baseImageBlob = null;
     let initialTouchDist = 0;
+
+    // Location request control
+    let locationRequestActive = false;
 
     const videoEl = document.getElementById("video");
     const canvasEl = document.getElementById("canvas");
@@ -178,184 +333,425 @@
     const switchBtn = document.getElementById("switch-btn");
     const viewWrapper = document.getElementById("view-wrapper");
 
+
     function showToast(msg) {
       toastEl.textContent = msg;
       toastEl.style.display = "block";
-      setTimeout(() => { toastEl.style.display = "none"; }, 3000);
+
+      setTimeout(() => {
+        toastEl.style.display = "none";
+      }, 3000);
     }
 
+
     async function killCameraTracks() {
+
       if (videoStream) {
+
         const tracks = videoStream.getVideoTracks();
+
         tracks.forEach((track) => track.stop());
+
         videoStream = null;
         videoEl.srcObject = null;
+
         await new Promise((resolve) => setTimeout(resolve, 500));
       }
     }
 
+
     async function startCameraSystem() {
+
       await killCameraTracks();
 
       try {
+
         videoStream = await navigator.mediaDevices.getUserMedia({
           video: {
-            facingMode: useFrontCamera ? "user" : { exact: "environment" },
+            facingMode: useFrontCamera
+              ? "user"
+              : { exact: "environment" },
+
             width: { ideal: 1920 },
             height: { ideal: 1080 }
           }
         });
+
         videoEl.srcObject = videoStream;
+
+        await videoEl.play().catch(() => {});
+
       } catch (err) {
+
         try {
+
           videoStream = await navigator.mediaDevices.getUserMedia({
-            video: { facingMode: useFrontCamera ? "user" : "environment" }
+            video: {
+              facingMode: useFrontCamera ? "user" : "environment"
+            }
           });
+
           videoEl.srcObject = videoStream;
+
+          await videoEl.play().catch(() => {});
+
         } catch (fallbackErr) {
+
           showToast("Camera Access Error");
           return;
         }
       }
 
+
       try {
+
         const tracks = videoStream.getVideoTracks();
+
         if (tracks.length > 0) {
-          const capabilities = tracks[0].getCapabilities ? tracks[0].getCapabilities() : {};
+
+          const capabilities = tracks[0].getCapabilities
+            ? tracks[0].getCapabilities()
+            : {};
+
           if (capabilities.zoom) {
+
             zoomSlider.min = capabilities.zoom.min || 1;
             zoomSlider.max = capabilities.zoom.max || 5;
             zoomSlider.step = capabilities.zoom.step || 0.1;
+
             maxZoomSupported = capabilities.zoom.max;
           }
         }
+
       } catch (e) {}
 
+
+      // Location polling is also started independently on page load.
       triggerLocationPoll();
     }
 
+
     async function toggleCamera() {
+
       switchBtn.style.pointerEvents = "none";
+
       useFrontCamera = !useFrontCamera;
+
       activeZoom = 1;
+
       applyZoomSetting(1);
-      
+
       await startCameraSystem();
+
       switchBtn.style.pointerEvents = "auto";
     }
 
+
     function applyZoomSetting(value) {
+
       activeZoom = parseFloat(value);
+
       zoomSlider.value = activeZoom;
+
       zoomValueDisplay.textContent = activeZoom.toFixed(1) + "x";
 
       if (videoStream) {
+
         const tracks = videoStream.getVideoTracks();
+
         if (tracks[0]?.getCapabilities?.().zoom) {
-          tracks[0].applyConstraints({ advanced: [{ zoom: activeZoom }] }).catch(() => {});
+
+          tracks[0].applyConstraints({
+            advanced: [{ zoom: activeZoom }]
+          }).catch(() => {});
+
           videoEl.style.transform = "scale(1)";
+
           return;
         }
       }
+
       videoEl.style.transform = `scale(${activeZoom})`;
     }
 
-    zoomSlider.addEventListener("input", (e) => applyZoomSetting(e.target.value));
+
+    zoomSlider.addEventListener("input", (e) => {
+      applyZoomSetting(e.target.value);
+    });
+
+
+    // ---------------------------------------
+    // IMPROVED LOCATION FETCHING FOR PWA
+    // ---------------------------------------
 
     function triggerLocationPoll() {
-      if (navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition(
-          async (pos) => {
-            geoPosition = pos.coords;
-            document.getElementById("lbl-lat").textContent = geoPosition.latitude.toFixed(6);
-            document.getElementById("lbl-lon").textContent = geoPosition.longitude.toFixed(6);
-            readableAddress = await reverseGeocode(geoPosition.latitude, geoPosition.longitude);
-            document.getElementById("lbl-address").textContent = "📍 " + readableAddress;
-          },
-          () => {
-            document.getElementById("lbl-address").textContent = "📍 GPS Error";
-          },
-          { enableHighAccuracy: true, timeout: 10000 }
-        );
-      } else {
-        readableAddress = "No GPS Support";
-        document.getElementById("lbl-address").textContent = readableAddress;
+
+      if (!navigator.geolocation) {
+
+        readableAddress = "GPS Not Supported";
+
+        document.getElementById("lbl-address").textContent =
+          "📍 " + readableAddress;
+
+        return;
       }
+
+      if (locationRequestActive) return;
+
+      locationRequestActive = true;
+
+      const locationSuccess = async (pos) => {
+
+        locationRequestActive = false;
+
+        geoPosition = pos.coords;
+
+        document.getElementById("lbl-lat").textContent =
+          geoPosition.latitude.toFixed(6);
+
+        document.getElementById("lbl-lon").textContent =
+          geoPosition.longitude.toFixed(6);
+
+        readableAddress = await reverseGeocode(
+          geoPosition.latitude,
+          geoPosition.longitude
+        );
+
+        document.getElementById("lbl-address").textContent =
+          "📍 " + readableAddress;
+      };
+
+
+      const locationError = (err, highAccuracy) => {
+
+        // Retry with lower accuracy if GPS times out
+        if (err.code === 3 && highAccuracy) {
+
+          navigator.geolocation.getCurrentPosition(
+            locationSuccess,
+
+            (fallbackError) => {
+
+              locationRequestActive = false;
+
+              if (fallbackError.code === 1) {
+                readableAddress = "Location Permission Denied";
+              } else if (fallbackError.code === 2) {
+                readableAddress = "Location Unavailable";
+              } else {
+                readableAddress = "Location Timeout";
+              }
+
+              document.getElementById("lbl-address").textContent =
+                "📍 " + readableAddress;
+            },
+
+            {
+              enableHighAccuracy: false,
+              timeout: 20000,
+              maximumAge: 60000
+            }
+          );
+
+          return;
+        }
+
+
+        locationRequestActive = false;
+
+        if (err.code === 1) {
+          readableAddress = "Location Permission Denied";
+        } else if (err.code === 2) {
+          readableAddress = "Location Unavailable";
+        } else {
+          readableAddress = "Location Timeout";
+        }
+
+        document.getElementById("lbl-address").textContent =
+          "📍 " + readableAddress;
+      };
+
+
+      navigator.geolocation.getCurrentPosition(
+        locationSuccess,
+
+        (err) => locationError(err, true),
+
+        {
+          enableHighAccuracy: true,
+          timeout: 30000,
+          maximumAge: 0
+        }
+      );
     }
 
+
     async function reverseGeocode(lat, lon) {
+
       try {
+
         const res = await fetch(
           `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`,
-          { headers: { "Accept-Language": "en" } }
+          {
+            headers: {
+              "Accept-Language": "en"
+            }
+          }
         );
+
+        if (!res.ok) {
+          throw new Error("Address lookup failed");
+        }
+
         const data = await res.json();
+
         const addr = data.address || {};
-        const locality = addr.village || addr.hamlet || addr.suburb || addr.locality || addr.town || addr.city || "Area Detected";
-        return `${locality}, ${addr.state || ""}, ${addr.country || ""}`.replace(/^,\s|,\s*$/g, "");
+
+        const locality =
+          addr.village ||
+          addr.hamlet ||
+          addr.suburb ||
+          addr.locality ||
+          addr.town ||
+          addr.city ||
+          "Area Detected";
+
+        return `${locality}, ${addr.state || ""}, ${addr.country || ""}`
+          .replace(/^,\s|,\s*$/g, "");
+
       } catch (err) {
+
         return "Location Verified";
       }
     }
 
+
+    // ---------------------------------------
+    // PINCH TO ZOOM
+    // ---------------------------------------
+
     viewWrapper.addEventListener("touchstart", (e) => {
+
       if (e.touches.length === 2) {
+
         initialTouchDist = Math.hypot(
           e.touches[0].clientX - e.touches[1].clientX,
           e.touches[0].clientY - e.touches[1].clientY
         );
       }
+
     }, { passive: true });
 
+
     viewWrapper.addEventListener("touchmove", (e) => {
+
       if (e.touches.length === 2 && initialTouchDist > 0) {
+
         const newDist = Math.hypot(
           e.touches[0].clientX - e.touches[1].clientX,
           e.touches[0].clientY - e.touches[1].clientY
         );
+
         const diff = newDist - initialTouchDist;
+
         let newZoom = activeZoom + diff * 0.01;
-        newZoom = Math.min(Math.max(newZoom, 1), maxZoomSupported);
+
+        newZoom = Math.min(
+          Math.max(newZoom, 1),
+          maxZoomSupported
+        );
+
         applyZoomSetting(newZoom);
+
         initialTouchDist = newDist;
       }
+
     }, { passive: true });
 
-    viewWrapper.addEventListener("touchend", () => { initialTouchDist = 0; });
 
-    setInterval(() => {
+    viewWrapper.addEventListener("touchend", () => {
+      initialTouchDist = 0;
+    });
+
+
+    // ---------------------------------------
+    // DATE AND TIME
+    // ---------------------------------------
+
+    function updateTime() {
+
       const now = new Date();
+
       document.getElementById("lbl-time").textContent =
-        now.toLocaleDateString("en-GB") + " " + now.toLocaleTimeString("en-US", { hour12: false });
-    }, 1000);
+        now.toLocaleDateString("en-GB") + " " +
+        now.toLocaleTimeString("en-US", {
+          hour12: false
+        });
+    }
+
+    updateTime();
+
+    setInterval(updateTime, 1000);
+
+
+    // ---------------------------------------
+    // CAPTURE PHOTO
+    // ---------------------------------------
 
     async function performCapture() {
+
       if (!videoStream) return;
+
       shutterBtn.classList.add("disabled");
 
       const track = videoStream.getVideoTracks()[0];
+
       const settings = track.getSettings();
+
       const width = settings.width || videoEl.videoWidth;
       const height = settings.height || videoEl.videoHeight;
 
       canvasEl.width = width;
       canvasEl.height = height;
+
       const ctx = canvasEl.getContext("2d");
 
       if (!track.getCapabilities?.().zoom && activeZoom > 1) {
+
         const sw = width / activeZoom;
         const sh = height / activeZoom;
+
         const sx = (width - sw) / 2;
         const sy = (height - sh) / 2;
-        ctx.drawImage(videoEl, sx, sy, sw, sh, 0, 0, width, height);
+
+        ctx.drawImage(
+          videoEl,
+          sx, sy, sw, sh,
+          0, 0, width, height
+        );
+
       } else {
+
         ctx.drawImage(videoEl, 0, 0, width, height);
       }
 
-      const latStr = geoPosition ? geoPosition.latitude.toFixed(6) : "--";
-      const lonStr = geoPosition ? geoPosition.longitude.toFixed(6) : "--";
+
+      const latStr = geoPosition
+        ? geoPosition.latitude.toFixed(6)
+        : "--";
+
+      const lonStr = geoPosition
+        ? geoPosition.longitude.toFixed(6)
+        : "--";
+
       const now = new Date();
-      const timeStr = now.toLocaleDateString("en-GB") + " " + now.toLocaleTimeString("en-US", { hour12: false });
+
+      const timeStr =
+        now.toLocaleDateString("en-GB") + " " +
+        now.toLocaleTimeString("en-US", {
+          hour12: false
+        });
+
 
       const line1 = `📍 ${readableAddress}`;
       const line2 = `Lat: ${latStr}°  Long: ${lonStr}°`;
@@ -363,82 +759,178 @@
       const line4 = `Powered by TCM Guide Gujarat`;
 
       const maxDim = Math.max(width, height);
+
       const fontSize = Math.round(0.024 * maxDim);
       const lineGap = Math.round(0.015 * maxDim);
       const padding = Math.round(0.02 * maxDim);
 
       ctx.font = `bold ${fontSize}px sans-serif`;
-      
+
       const w1 = ctx.measureText(line1).width;
       const w2 = ctx.measureText(line2).width;
       const w3 = ctx.measureText(line3).width;
       const w4 = ctx.measureText(line4).width;
+
       const maxTextWidth = Math.max(w1, w2, w3, w4);
 
       const boxWidth = maxTextWidth + (padding * 2);
-      const boxHeight = (fontSize * 4) + (lineGap * 3) + (padding * 2);
+
+      const boxHeight =
+        (fontSize * 4) +
+        (lineGap * 3) +
+        (padding * 2);
+
       const margin = Math.round(0.025 * maxDim);
+
       const boxX = margin;
       const boxY = height - boxHeight - margin;
 
       ctx.fillStyle = "rgba(0, 0, 0, 0.70)";
-      ctx.fillRect(boxX, boxY, boxWidth, boxHeight);
+
+      ctx.fillRect(
+        boxX,
+        boxY,
+        boxWidth,
+        boxHeight
+      );
 
       let currentY = boxY + padding + fontSize;
 
       ctx.fillStyle = "#ffb300";
+
       ctx.font = `bold ${fontSize}px sans-serif`;
-      ctx.fillText(line1, boxX + padding, currentY);
+
+      ctx.fillText(
+        line1,
+        boxX + padding,
+        currentY
+      );
 
       currentY += fontSize + lineGap;
+
       ctx.fillStyle = "#ffffff";
+
       ctx.font = `500 ${fontSize}px sans-serif`;
-      ctx.fillText(line2, boxX + padding, currentY);
+
+      ctx.fillText(
+        line2,
+        boxX + padding,
+        currentY
+      );
 
       currentY += fontSize + lineGap;
-      ctx.fillText(line3, boxX + padding, currentY);
+
+      ctx.fillText(
+        line3,
+        boxX + padding,
+        currentY
+      );
 
       currentY += fontSize + lineGap;
+
       ctx.fillStyle = "#ffb300";
+
       ctx.font = `bold ${fontSize}px sans-serif`;
-      ctx.fillText(line4, boxX + padding, currentY);
+
+      ctx.fillText(
+        line4,
+        boxX + padding,
+        currentY
+      );
+
 
       canvasEl.toBlob(
         (blob) => {
+
+          if (!blob) {
+            shutterBtn.classList.remove("disabled");
+            showToast("Photo Capture Failed");
+            return;
+          }
+
           baseImageBlob = blob;
+
           dlBtn.style.opacity = "1";
           dlBtn.style.pointerEvents = "auto";
+
           shutterBtn.classList.remove("disabled");
+
           showToast("Captured successfully!");
+
         },
         "image/jpeg",
         0.95
       );
     }
 
+
+    // ---------------------------------------
+    // DOWNLOAD PHOTO
+    // ---------------------------------------
+
     function saveToGallery() {
+
       if (!baseImageBlob) return;
 
       const url = URL.createObjectURL(baseImageBlob);
+
       const a = document.createElement("a");
+
       a.href = url;
+
       a.download = `GEOTAG_${Date.now()}.jpg`;
+
       document.body.appendChild(a);
+
       a.click();
+
       document.body.removeChild(a);
-      
+
       setTimeout(() => {
+
         URL.revokeObjectURL(url);
+
         alert("Downloaded Successfully!");
+
       }, 300);
     }
 
+
+    // ---------------------------------------
+    // APP STARTUP
+    // ---------------------------------------
+
     window.addEventListener("load", () => {
+
+      // Fetch location immediately
+      triggerLocationPoll();
+
+      // Start camera
       startCameraSystem();
+
+      // Register Service Worker
       if ("serviceWorker" in navigator) {
-        navigator.serviceWorker.register("sw.js").catch(() => {});
+
+        navigator.serviceWorker.register("sw.js")
+          .catch(() => {});
       }
     });
+
+
+    // Retry location when PWA becomes active
+    document.addEventListener("visibilitychange", () => {
+
+      if (document.visibilityState === "visible") {
+        triggerLocationPoll();
+      }
+    });
+
+
+    window.addEventListener("pageshow", () => {
+      triggerLocationPoll();
+    });
+
   </script>
+
 </body>
 </html>
