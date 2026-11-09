@@ -813,151 +813,193 @@
     // CAPTURE PHOTO
     // ---------------------------------------
 
-    async function performCapture() {
-      if (!videoStream) return;
+   
+async function performCapture() {
 
-      shutterBtn.classList.add("disabled");
+  if (!videoStream) return;
 
-      const track = videoStream.getVideoTracks()[0];
-      const settings = track.getSettings();
+  shutterBtn.classList.add("disabled");
 
-      const width = settings.width || videoEl.videoWidth;
-      const height = settings.height || videoEl.videoHeight;
+  const track = videoStream.getVideoTracks()[0];
+  const settings = track.getSettings();
 
-      canvasEl.width = width;
-      canvasEl.height = height;
+  const width = settings.width || videoEl.videoWidth;
+  const height = settings.height || videoEl.videoHeight;
 
-      const ctx = canvasEl.getContext("2d");
+  canvasEl.width = width;
+  canvasEl.height = height;
 
-      if (!track.getCapabilities?.().zoom && activeZoom > 1) {
-        const sw = width / activeZoom;
-        const sh = height / activeZoom;
-        const sx = (width - sw) / 2;
-        const sy = (height - sh) / 2;
+  const ctx = canvasEl.getContext("2d");
 
-        ctx.drawImage(
-          videoEl,
-          sx, sy, sw, sh,
-          0, 0, width, height
-        );
-      } else {
-        ctx.drawImage(videoEl, 0, 0, width, height);
+  if (!track.getCapabilities?.().zoom && activeZoom > 1) {
+
+    const sw = width / activeZoom;
+    const sh = height / activeZoom;
+    const sx = (width - sw) / 2;
+    const sy = (height - sh) / 2;
+
+    ctx.drawImage(
+      videoEl,
+      sx, sy, sw, sh,
+      0, 0, width, height
+    );
+
+  } else {
+    ctx.drawImage(videoEl, 0, 0, width, height);
+  }
+
+  const latStr = geoPosition
+    ? geoPosition.latitude.toFixed(6)
+    : "--";
+
+  const lonStr = geoPosition
+    ? geoPosition.longitude.toFixed(6)
+    : "--";
+
+  const now = new Date();
+
+  const timeStr =
+    now.toLocaleDateString("en-GB") + " " +
+    now.toLocaleTimeString("en-US", {
+      hour12: false
+    });
+
+  const line1 = `📍 ${readableAddress}`;
+  const line2 = `Lat: ${latStr}°  Long: ${lonStr}°`;
+  const line3 = `Time: ${timeStr}`;
+  const line4 = `Powered by TCM Guide Gujarat`;
+
+  const maxDim = Math.max(width, height);
+  const margin = Math.round(0.025 * maxDim);
+  const padding = Math.round(0.02 * maxDim);
+
+  // Keep the complete overlay inside the photo
+  const maxBoxWidth = width - (margin * 2);
+
+  // Responsive satellite map size
+  const mapSize = Math.min(
+    Math.round(width * 0.18),
+    Math.round(maxDim * 0.15),
+    220
+  );
+
+  // Available width for text
+  const textAreaWidth =
+    maxBoxWidth - mapSize - (padding * 3) - 10;
+
+  // Responsive font size
+  let fontSize = Math.min(
+    Math.round(maxDim * 0.024),
+    Math.round(width * 0.025)
+  );
+
+  fontSize = Math.max(fontSize, 12);
+
+  let lineGap = Math.round(fontSize * 0.6);
+
+  // Reduce font size if any text is too wide
+  ctx.font = `bold ${fontSize}px sans-serif`;
+
+  const allLines = [line1, line2, line3, line4];
+
+  let maxTextWidth = Math.max(
+    ...allLines.map(line => ctx.measureText(line).width)
+  );
+
+  while (maxTextWidth > textAreaWidth && fontSize > 12) {
+
+    fontSize = Math.max(12, Math.floor(fontSize * 0.9));
+    lineGap = Math.round(fontSize * 0.6);
+
+    ctx.font = `bold ${fontSize}px sans-serif`;
+
+    maxTextWidth = Math.max(
+      ...allLines.map(line => ctx.measureText(line).width)
+    );
+  }
+
+  const boxWidth = maxBoxWidth;
+
+  const textHeight =
+    (fontSize * 4) + (lineGap * 3);
+
+  const boxHeight = Math.max(
+    mapSize + (padding * 2),
+    textHeight + (padding * 2)
+  );
+
+  const boxX = margin;
+  const boxY = height - boxHeight - margin;
+
+  // Background
+  ctx.fillStyle = "rgba(0, 0, 0, 0.75)";
+  ctx.fillRect(boxX, boxY, boxWidth, boxHeight);
+
+  // Satellite map
+  const mapX = boxX + padding;
+  const mapY = boxY + Math.round((boxHeight - mapSize) / 2);
+
+  try {
+    ctx.drawImage(
+      miniMapCanvas,
+      mapX,
+      mapY,
+      mapSize,
+      mapSize
+    );
+  } catch (e) {}
+
+  // Text beside map
+  const textX = mapX + mapSize + padding;
+  let currentY = boxY + padding + fontSize;
+
+  ctx.textAlign = "left";
+  ctx.fillStyle = "#ffb300";
+  ctx.font = `bold ${fontSize}px sans-serif`;
+
+  ctx.fillText(line1, textX, currentY, textAreaWidth);
+
+  currentY += fontSize + lineGap;
+
+  ctx.fillStyle = "#ffffff";
+  ctx.font = `500 ${fontSize}px sans-serif`;
+
+  ctx.fillText(line2, textX, currentY, textAreaWidth);
+
+  currentY += fontSize + lineGap;
+  ctx.fillText(line3, textX, currentY, textAreaWidth);
+
+  currentY += fontSize + lineGap;
+
+  ctx.fillStyle = "#ffb300";
+  ctx.font = `bold ${fontSize}px sans-serif`;
+
+  ctx.fillText(line4, textX, currentY, textAreaWidth);
+
+  canvasEl.toBlob(
+    (blob) => {
+
+      if (!blob) {
+        shutterBtn.classList.remove("disabled");
+        showToast("Photo Capture Failed");
+        return;
       }
 
-      const latStr = geoPosition
-        ? geoPosition.latitude.toFixed(6)
-        : "--";
+      baseImageBlob = blob;
 
-      const lonStr = geoPosition
-        ? geoPosition.longitude.toFixed(6)
-        : "--";
+      dlBtn.style.opacity = "1";
+      dlBtn.style.pointerEvents = "auto";
 
-      const now = new Date();
+      shutterBtn.classList.remove("disabled");
 
-      const timeStr =
-        now.toLocaleDateString("en-GB") + " " +
-        now.toLocaleTimeString("en-US", {
-          hour12: false
-        });
+      showToast("Captured successfully!");
 
-      const line1 = `📍 ${readableAddress}`;
-      const line2 = `Lat: ${latStr}°  Long: ${lonStr}°`;
-      const line3 = `Time: ${timeStr}`;
-      const line4 = `Powered by TCM Guide Gujarat`;
+    },
+    "image/jpeg",
+    0.95
+  );
+}
 
-      const maxDim = Math.max(width, height);
-      const fontSize = Math.round(0.024 * maxDim);
-      const lineGap = Math.round(0.015 * maxDim);
-      const padding = Math.round(0.02 * maxDim);
-
-      ctx.font = `bold ${fontSize}px sans-serif`;
-
-      const maxTextWidth = Math.max(
-        ctx.measureText(line1).width,
-        ctx.measureText(line2).width,
-        ctx.measureText(line3).width,
-        ctx.measureText(line4).width
-      );
-
-      // Map size in captured photo
-      const mapSize = Math.round(maxDim * 0.15);
-
-      const textWidth = maxTextWidth;
-      const boxWidth = mapSize + textWidth + padding * 3 + 10;
-
-      const textHeight =
-        (fontSize * 4) +
-        (lineGap * 3);
-
-      const boxHeight = Math.max(
-        mapSize + padding * 2,
-        textHeight + padding * 2
-      );
-
-      const margin = Math.round(0.025 * maxDim);
-      const boxX = margin;
-      const boxY = height - boxHeight - margin;
-
-      ctx.fillStyle = "rgba(0, 0, 0, 0.75)";
-      ctx.fillRect(boxX, boxY, boxWidth, boxHeight);
-
-      // Draw satellite map on photo
-      const mapX = boxX + padding;
-      const mapY = boxY + Math.round((boxHeight - mapSize) / 2);
-
-      try {
-        ctx.drawImage(
-          miniMapCanvas,
-          mapX,
-          mapY,
-          mapSize,
-          mapSize
-        );
-      } catch (e) {}
-
-      // Text beside map
-      const textX = mapX + mapSize + padding;
-      let currentY = boxY + padding + fontSize;
-
-      ctx.fillStyle = "#ffb300";
-      ctx.font = `bold ${fontSize}px sans-serif`;
-      ctx.fillText(line1, textX, currentY);
-
-      currentY += fontSize + lineGap;
-
-      ctx.fillStyle = "#ffffff";
-      ctx.font = `500 ${fontSize}px sans-serif`;
-      ctx.fillText(line2, textX, currentY);
-
-      currentY += fontSize + lineGap;
-      ctx.fillText(line3, textX, currentY);
-
-      currentY += fontSize + lineGap;
-
-      ctx.fillStyle = "#ffb300";
-      ctx.font = `bold ${fontSize}px sans-serif`;
-      ctx.fillText(line4, textX, currentY);
-
-      canvasEl.toBlob(
-        (blob) => {
-          if (!blob) {
-            shutterBtn.classList.remove("disabled");
-            showToast("Photo Capture Failed");
-            return;
-          }
-
-          baseImageBlob = blob;
-
-          dlBtn.style.opacity = "1";
-          dlBtn.style.pointerEvents = "auto";
-
-          shutterBtn.classList.remove("disabled");
-          showToast("Captured successfully!");
-        },
-        "image/jpeg",
-        0.95
-      );
-    }
 
     // ---------------------------------------
     // DOWNLOAD PHOTO
